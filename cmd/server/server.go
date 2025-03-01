@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,7 +21,40 @@ import (
 var (
 	configYml string
 	engine    *kernel.Engine
+	StartCmd  = &cobra.Command{
+		Use:     "server",
+		Short:   "Set Application config info",
+		Example: "main server -c config/settings.yml",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			println("Loading config...")
+			SetUp()
+			println("Loading config complete")
+			//println("Loading Api...")
+			//load()
+			println("Loading Api complete")
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			println("Starting Server...")
+			Run()
+		},
+	}
 )
+
+var env string
+
+func init() {
+	StartCmd.PersistentFlags().StringVarP(&env, "env", "e", "dev", "Specify the environment: dev or prod")
+	StartCmd.PersistentFlags().StringVarP(&configYml, "config", "c", "", "Start server with provided configuration file")
+
+	// 根据环境变量选择默认配置文件
+	if configYml == "" {
+		if env == "prod" {
+			configYml = "config/config.yaml"
+		} else {
+			configYml = "config/config.dev.yaml"
+		}
+	}
+}
 
 func SetUp() {
 	// 初始化全局 ctx

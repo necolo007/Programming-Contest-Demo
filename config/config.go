@@ -10,6 +10,7 @@ import (
 var serveConfig *GlobalConfig
 
 func LoadConfig(configYml string) {
+	println("configYml file path: ", configYml)
 	if !fs.FileExist(configYml) {
 		println("cannot find config file")
 		os.Exit(1)
