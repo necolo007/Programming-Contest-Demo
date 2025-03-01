@@ -1,6 +1,8 @@
 package main
 
-import "Programming-Demo/cmd/server"
+import (
+	"Programming-Demo/cmd/server"
+)
 
 func main() {
 	server.SetUp()
