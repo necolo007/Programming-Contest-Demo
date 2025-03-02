@@ -8,6 +8,7 @@ type GlobalConfig struct {
 	VERSION     string `yaml:"Version"`
 	Host        string `yaml:"Host"`
 	Port        string `yaml:"Port"`
+	Apikey      string `yaml:"Apikey"`
 	LogPath     string `yaml:"LogPath"`
 	Auth        struct {
 		Secret string `yaml:"Secret"`
