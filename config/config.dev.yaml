@@ -1,0 +1,31 @@
+AppName: TimerMe3
+Mode: debug
+Version: "v1"
+Host: "0.0.0.0"
+Port: "12349"
+ApiKey: "sk-fKhH2C9jzWaJ12z6FOOqZR8vDWIj9g8bS4yzkeJAYc6XZv7i"
+Databases:
+    - Key: "MainMysql"
+      Type: "mysql"
+      Ip: "127.0.0.1"
+      Port: "13306"
+      User: "root"
+      Password: "123456"
+      Database: dev
+
+Caches:
+  - Key: "MainRedis"
+    Ip: "127.0.0.1"
+    Port: "6379"
+    Type: "redis"
+    Password: ""
+    Db: 0
+
+minio:
+  endpoint: "116.198.207.159:9000"
+  accessKeyID: "minioadmin"
+  secretAccessKey: "kdMEt79ywmvq3P36FXTh"
+  useSSL: false
+
+jwt:
+  jwtsecret: "Ma/ZA4ElPIv7co4yctYQAiKlF7sVIRz6VLqwPd90+x1qGPsC+BXzND9oh5xuLV03m9oDJHYkWp4JMZ1Fc9aS5Q=="
