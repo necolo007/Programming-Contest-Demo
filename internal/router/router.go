@@ -20,14 +20,11 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 	}
 
 	// 管理员相关路由
-	adminGroup := r.Group("/api/admin")
+	adminGroup := r.Group("/api/admin", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
 	{
-		adminGroup.POST("/login", user_handler.AdminLogin)
-		// 需要管理员权限的路由
-		adminGroup.Group("/", web.JWTAuthMiddleware())
-		{
-			// 这里可以添加需要管理员权限的路由
-		}
+		// 这里可以添加需要管理员权限的路由
+		// 管理员可以获取所有用户信息
+		adminGroup.GET("/users", user_handler.GetAllUsers)
 	}
 
 	return r

@@ -73,63 +73,12 @@ func Register(c *gin.Context) {
 	})
 }
 
-func AdminLogin(c *gin.Context) {
-	var req user_dto.AdminLoginReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "参数错误",
-			"error":   err.Error(),
-		})
-		return
-	}
-
-	// 查找用户
-	var user user_entity.User
-	if err := dbs.DB.Where("username = ? AND role = ?", req.Username, "admin").First(&user).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"code":    401,
-			"message": "用户名或密码错误，或非管理员账户",
-		})
-		return
-	}
-
-	// 验证密码
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"code":    401,
-			"message": "用户名或密码错误",
-		})
-		return
-	}
-
-	// 生成JWT令牌
-	token, err := auth.GenerateToken(user.ID, user.Username, user.Role)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "令牌生成失败",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "登录成功",
-		"data": user_dto.AdminLoginResp{
-			Token: token,
-			Role:  user.Role,
-		},
-	})
-}
-
 func Login(c *gin.Context) {
 	var req user_dto.LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "参数错误",
-			"error":   err.Error(),
+			"message": "请求参数格式不正确",
 		})
 		return
 	}
@@ -158,18 +107,29 @@ func Login(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
-			"message": "令牌生成失败",
+			"message": "系统错误，请稍后重试",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	// 根据用户角色返回不同的响应
+	response := gin.H{
 		"code":    200,
 		"message": "登录成功",
-		"data": user_dto.LoginResp{
+	}
+
+	if user.Role == "admin" {
+		response["data"] = user_dto.AdminLoginResp{
 			Token: token,
-		},
-	})
+			Role:  user.Role,
+		}
+	} else {
+		response["data"] = user_dto.LoginResp{
+			Token: token,
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func Logout(c *gin.Context) {

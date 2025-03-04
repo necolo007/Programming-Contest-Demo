@@ -49,3 +49,29 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// AdminAuthMiddleware 是一个Gin中间件，用于验证用户是否具有管理员权限
+func AdminAuthMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        role, exists := c.Get("role")
+        if !exists {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "code": http.StatusUnauthorized,
+                "msg":  "无法获取用户角色信息",
+            })
+            c.Abort()
+            return
+        }
+
+        if role != "admin" {
+            c.JSON(http.StatusForbidden, gin.H{
+                "code": http.StatusForbidden,
+                "msg":  "需要管理员权限",
+            })
+            c.Abort()
+            return
+        }
+
+        c.Next()
+    }
+}
