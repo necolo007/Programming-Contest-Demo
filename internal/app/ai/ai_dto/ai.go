@@ -1,7 +1,8 @@
 package ai_dto
 
 type AnalyzeReq struct {
-	Path string `json:"path"`
+	Model string `json:"model"`
+	Name  string `json:"name"`
 }
 
 type LawsBase struct {
@@ -50,7 +51,32 @@ type Party struct {
 	Details string `json:"details"` // 详细信息（如地址、证件号等）
 }
 
-type GenerateLegalDocResp struct {
-	Title   string `json:"title"`   // 生成的文档标题
-	Content string `json:"content"` // 生成的文档内容
+type ComplaintBase struct {
+	Court       string   `json:"court"`       // 受理法院
+	Plaintiff   Party    `json:"plaintiff"`   // 原告信息
+	Defendant   Party    `json:"defendant"`   // 被告信息
+	Claims      []string `json:"claims"`      // 诉讼请求
+	Facts       string   `json:"facts"`       // 事实与理由
+	Evidence    []string `json:"evidence"`    // 证据列表
+	LawBasis    []string `json:"law_basis"`   // 法律依据
+	Attachments []string `json:"attachments"` // 附件清单
+}
+
+type LegalOpinionBase struct {
+	Background  string   `json:"background"`  // 案件背景
+	Issues      []string `json:"issues"`      // 法律问题
+	Analysis    string   `json:"analysis"`    // 法律分析
+	Risks       []string `json:"risks"`       // 法律风险
+	Suggestions []string `json:"suggestions"` // 法律建议
+	References  []string `json:"references"`  // 法律依据
+}
+
+type GenerateComplaintReq struct {
+	Model   string        `json:"model"`   // AI模型
+	Content ComplaintBase `json:"content"` // 起诉状内容
+}
+
+type GenerateLegalOpinionReq struct {
+	Model   string           `json:"model"`   // AI模型
+	Content LegalOpinionBase `json:"content"` // 法律意见书内容
 }
