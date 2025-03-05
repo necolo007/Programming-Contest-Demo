@@ -2,6 +2,7 @@ package router
 
 import (
 	"Programming-Demo/core/middleware/web"
+	"Programming-Demo/internal/app/File/file_handler"
 	"Programming-Demo/internal/app/ai/ai_handler"
 	"Programming-Demo/internal/app/user/user_handler"
 
@@ -10,7 +11,6 @@ import (
 
 func GenerateRouters(r *gin.Engine) *gin.Engine {
 	r.GET("/ping", ai_handler.PingMoonshot)
-
 	// 用户相关路由
 	userGroup := r.Group("/api/user")
 	{
@@ -26,6 +26,11 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		// 管理员可以获取所有用户信息
 		adminGroup.GET("/users", user_handler.GetAllUsers)
 	}
-
+	fileGroup := r.Group("/api/file", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
+	{
+		fileGroup.POST("/upload", file_handler.UploadFileHandler)
+		fileGroup.GET("/download/:id", file_handler.DownloadFileHandler)
+		fileGroup.DELETE("/delete/:id", file_handler.DeleteFileHandler)
+	}
 	return r
 }
