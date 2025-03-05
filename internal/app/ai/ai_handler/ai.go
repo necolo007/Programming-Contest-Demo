@@ -4,13 +4,16 @@ import (
 	"Programming-Demo/core/client"
 	"Programming-Demo/internal/app/ai/ai_dto"
 	"Programming-Demo/pkg/utils/ai"
+	"Programming-Demo/pkg/utils/deepseek"
+	"Programming-Demo/pkg/utils/prompt"
 	"context"
 	"errors"
-	"github.com/gin-gonic/gin"
-	"github.com/northes/go-moonshot"
 	"io"
 	"net/http"
 	"os"
+
+	"github.com/gin-gonic/gin"
+	"github.com/northes/go-moonshot"
 )
 
 func PingMoonshot(c *gin.Context) {
@@ -79,5 +82,40 @@ func AnalyzeFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "文件读取错误"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": ai.GetAIResp(string(content))})
+	Resp, code := ai.GetAIResp("请提取下列法律文件中的关键信息，并分析下述法律合同" + string(content))
+	if code != 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "调用ai接口失败"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": code, "message": Resp})
+}
+
+func GenerateLegalDocument(c *gin.Context) {
+	var req ai_dto.GenerateLegalDocReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "参数错误",
+			"error":   err.Error(),
+		})
+		return
+	}
+	var Resp string
+	var code int
+	p := prompt.BuildLegalDocPrompt(req)
+	if req.Model == "moonshot" {
+		Resp, code = ai.GetAIResp(p)
+	} else if req.Model == "deepseek-chat" {
+		Resp, code = deepseek.ChatWithDeepSeek(p, "POST", req.Model)
+	} else if req.Model == "deepseek-reasoner" {
+		Resp, code = deepseek.ChatWithDeepSeek(p, "POST", req.Model)
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "模型错误"})
+		return
+	}
+	if code != 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "调用ai接口失败", "error": Resp})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": code, "message": Resp})
 }

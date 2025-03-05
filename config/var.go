@@ -9,6 +9,7 @@ type GlobalConfig struct {
 	Host        string `yaml:"Host"`
 	Port        string `yaml:"Port"`
 	Apikey      string `yaml:"Apikey"`
+	DeepSeekKey string `yaml:"DeepSeekKey"`
 	LogPath     string `yaml:"LogPath"`
 	Auth        struct {
 		Secret string `yaml:"Secret"`

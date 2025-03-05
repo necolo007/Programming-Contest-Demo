@@ -18,7 +18,11 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		userGroup.POST("/login", user_handler.Login)
 		userGroup.POST("/logout", web.JWTAuthMiddleware(), user_handler.Logout)
 	}
-
+	aiGroup := r.Group("/api/ai")
+	{
+		aiGroup.POST("/analyze", web.JWTAuthMiddleware(), ai_handler.AnalyzeFile)
+		aiGroup.POST("/generation", web.JWTAuthMiddleware(), ai_handler.GenerateLegalDocument)
+	}
 	// 管理员相关路由
 	adminGroup := r.Group("/api/admin", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
 	{

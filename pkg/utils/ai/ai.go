@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-func GetAIResp(m string) string {
+func GetAIResp(m string) (string, int) {
 	resp, err := client.MoonClient.GetClient().Chat().CompletionsStream(context.Background(), &moonshot.ChatCompletionsRequest{
 		Model: moonshot.ModelMoonshotV18K,
 		Messages: []*moonshot.ChatCompletionsMessage{
@@ -22,18 +22,18 @@ func GetAIResp(m string) string {
 	})
 	var message string
 	if err != nil {
-		return "moonshot chat failed"
+		return "moonshot chat failed", 500
 	} else {
 		for receive := range resp.Receive() {
 			msg, err1 := receive.GetMessage()
 			if err1 != nil {
 				if errors.Is(err1, io.EOF) {
-					return message
+					return message, 200
 				}
-				return message
+				return err1.Error(), 500
 			}
 			message = message + msg.Content
 		}
 	}
-	return message
+	return err.Error(), 500
 }
