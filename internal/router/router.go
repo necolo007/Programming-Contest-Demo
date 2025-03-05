@@ -21,7 +21,9 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 	aiGroup := r.Group("/api/ai")
 	{
 		aiGroup.POST("/analyze", web.JWTAuthMiddleware(), ai_handler.AnalyzeFile)
-		aiGroup.POST("/generation", web.JWTAuthMiddleware(), ai_handler.GenerateLegalDocument)
+		aiGroup.POST("/contract", web.JWTAuthMiddleware(), ai_handler.GenerateLegalDocument)
+		aiGroup.POST("/complain", web.JWTAuthMiddleware(), ai_handler.GenerateComplaint)
+		aiGroup.POST("/opinion", web.JWTAuthMiddleware(), ai_handler.GenerateLegalOpinion)
 	}
 	// 管理员相关路由
 	adminGroup := r.Group("/api/admin", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
@@ -32,9 +34,9 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 	}
 	fileGroup := r.Group("/api/file", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
 	{
-		fileGroup.POST("/upload", file_handler.UploadFileHandler)
-		fileGroup.GET("/download/:id", file_handler.DownloadFileHandler)
-		fileGroup.DELETE("/delete/:id", file_handler.DeleteFileHandler)
+		fileGroup.POST("/upload", web.JWTAuthMiddleware(), file_handler.UploadFileHandler)
+		fileGroup.GET("/download/:id", web.JWTAuthMiddleware(), file_handler.DownloadFileHandler)
+		fileGroup.DELETE("/delete/:id", web.JWTAuthMiddleware(), file_handler.DeleteFileHandler)
 	}
 	return r
 }
