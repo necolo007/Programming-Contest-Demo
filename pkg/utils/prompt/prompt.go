@@ -142,3 +142,46 @@ func BuildLegalOpinionPrompt(req ai_dto.GenerateLegalOpinionReq) string {
 
 	return prompt
 }
+
+// BuildLegalAnalysisPrompt 构建法律文件分析提示词
+func BuildLegalAnalysisPrompt(content string) string {
+	prompt := "请对以下法律文件进行专业分析，要求如下：\n\n"
+
+	prompt += "1. 文件基本信息提取：\n"
+	prompt += "   - 文件类型和性质\n"
+	prompt += "   - 文件签署日期和生效时间\n"
+	prompt += "   - 涉及的主体方\n"
+	prompt += "   - 文件的主要目的\n\n"
+
+	prompt += "2. 关键信息提取：\n"
+	prompt += "   - 重要条款内容\n"
+	prompt += "   - 关键日期节点\n"
+	prompt += "   - 金额和支付条件\n"
+	prompt += "   - 权利义务关系\n\n"
+
+	prompt += "3. 法律术语解释：\n"
+	prompt += "   - 识别文件中的专业法律术语\n"
+	prompt += "   - 提供通俗易懂的解释\n"
+	prompt += "   - 说明术语在文件中的具体含义和作用\n\n"
+
+	prompt += "4. 条款分类分析：\n"
+	prompt += "   - 主要条款分类（如基本条款、履行条款、违约条款等）\n"
+	prompt += "   - 各类条款的主要内容概述\n"
+	prompt += "   - 条款之间的关联性分析\n\n"
+
+	prompt += "5. 风险提示：\n"
+	prompt += "   - 潜在的法律风险点\n"
+	prompt += "   - 条款中的不明确或争议之处\n"
+	prompt += "   - 建议重点关注的内容\n\n"
+
+	prompt += "待分析的法律文件内容如下：\n"
+	prompt += content + "\n\n"
+
+	prompt += "请按照以下格式输出分析结果：\n"
+	prompt += "1. 使用清晰的层级结构\n"
+	prompt += "2. 重要内容需要突出显示\n"
+	prompt += "3. 专业术语解释要通俗易懂\n"
+	prompt += "4. 风险提示要具体明确\n"
+
+	return prompt
+}

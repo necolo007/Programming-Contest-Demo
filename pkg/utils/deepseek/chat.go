@@ -4,7 +4,6 @@ import (
 	"Programming-Demo/config"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -107,6 +106,5 @@ func ChatWithDeepSeek(content string, method string, model string) (string, int)
 	if len(response.Choices) == 0 {
 		return "响应格式正确但没有内容", 500
 	}
-	log.Println(response)
 	return response.Choices[0].Message.Content, 200
 }
