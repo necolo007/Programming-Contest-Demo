@@ -89,7 +89,7 @@ func AnalyzeFile(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "文件读取错误"})
 		return
 	}
-	Resp, code := ai.GetAIResp("请提取下列法律文件中的关键信息，并分析下述法律合同" + string(content))
+	Resp, code := ai.GetAIResp(prompt.BuildLegalAnalysisPrompt(string(content)))
 	if code != 200 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "调用ai接口失败"})
 		return
@@ -176,6 +176,35 @@ func GenerateComplaint(c *gin.Context) {
 		Resp, code = ai.GetAIResp(p)
 	case "deepseek-chat", "deepseek-reasoner":
 		Resp, code = deepseek.ChatWithDeepSeek(p, "POST", req.Model)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"message": "模型错误"})
+		return
+	}
+	if code != 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "调用ai接口失败", "error": Resp})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": code, "message": Resp})
+}
+
+func ChatWithAi(c *gin.Context) {
+	var req ai_dto.ChatReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "参数错误",
+			"error":   err.Error(),
+		})
+		return
+	}
+	var Resp string
+	var code int
+	// 选择不同的 AI 模型处理
+	switch req.Model {
+	case "moonshot":
+		Resp, code = ai.GetAIResp(req.Content)
+	case "deepseek-chat", "deepseek-reasoner":
+		Resp, code = deepseek.ChatWithDeepSeek(req.Content, "POST", req.Model)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"message": "模型错误"})
 		return

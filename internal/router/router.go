@@ -24,6 +24,7 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		aiGroup.POST("/contract", web.JWTAuthMiddleware(), ai_handler.GenerateLegalDocument)
 		aiGroup.POST("/complain", web.JWTAuthMiddleware(), ai_handler.GenerateComplaint)
 		aiGroup.POST("/opinion", web.JWTAuthMiddleware(), ai_handler.GenerateLegalOpinion)
+		aiGroup.POST("/chat", web.JWTAuthMiddleware(), ai_handler.ChatWithAi)
 	}
 	// 管理员相关路由
 	adminGroup := r.Group("/api/admin", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
