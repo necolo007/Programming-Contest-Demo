@@ -4,6 +4,7 @@ import (
 	"Programming-Demo/core/middleware/web"
 	"Programming-Demo/internal/app/File/file_handler"
 	"Programming-Demo/internal/app/ai/ai_handler"
+	"Programming-Demo/internal/app/file_search/search_handler"
 	"Programming-Demo/internal/app/user/user_handler"
 
 	"github.com/gin-gonic/gin"
@@ -38,6 +39,15 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		fileGroup.POST("/upload", web.JWTAuthMiddleware(), file_handler.UploadFileHandler)
 		fileGroup.GET("/download/:id", web.JWTAuthMiddleware(), file_handler.DownloadFileHandler)
 		fileGroup.DELETE("/delete/:id", web.JWTAuthMiddleware(), file_handler.DeleteFileHandler)
+		// 文件搜索相关路由
+		searchGroup := fileGroup.Group("/search")
+		{
+			searchGroup.POST("/keyword", search_handler.KeywordSearch)             // 关键词搜索（支持精确和模糊搜索）
+			searchGroup.POST("/advanced", search_handler.AdvancedSearch)           // 高级搜索
+			searchGroup.POST("/semantic", search_handler.SemanticSearch)           // 语义搜索
+			searchGroup.GET("/type", search_handler.SearchFileByTypeHandler)       // 按文件类型搜索
+			searchGroup.GET("/content", search_handler.SearchFileByContentHandler) // 按文件内容搜索
+		}
 	}
 	return r
 }

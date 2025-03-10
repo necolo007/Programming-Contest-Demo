@@ -102,7 +102,7 @@ func UploadFileHandler(c *gin.Context) {
 		return
 	}
 
-	// 存入数据库
+	// 在 UploadFileHandler 函数中修改创建文件记录的部分
 	newFile := file_entity.File{
 		Filename: fileHeader.Filename,
 		Filepath: savePath,
@@ -111,6 +111,10 @@ func UploadFileHandler(c *gin.Context) {
 		MIMEType: contentType,
 		Category: req.Category,
 		Hash:     hash,
+		FileType: req.Category, // 添加 FileType
+		Status:   1,            // 设置状态为正常
+		Author:   "",           // 可以从用户信息中获取
+		Content:  "",           // 如果需要存储文件内容，可以在这里读取文件内容
 	}
 
 	if err := dbs.DB.Create(&newFile).Error; err != nil {
@@ -146,6 +150,12 @@ func DownloadFileHandler(c *gin.Context) {
 	// 检查文件所属的用户是否为当前请求用户
 	if file.UserID != uid {
 		c.JSON(403, gin.H{"error": "没有访问权限"})
+		return
+	}
+
+	// 检查文件状态
+	if file.Status != 1 {
+		c.JSON(404, gin.H{"error": "文件已被删除或禁用"})
 		return
 	}
 
@@ -195,8 +205,10 @@ func DeleteFileHandler(c *gin.Context) {
 		return
 	}
 
-	// 执行软删除
-	if err := dbs.DB.Delete(&file).Error; err != nil {
+	// 执行软删除，更新状态
+	if err := dbs.DB.Model(&file).Updates(map[string]interface{}{
+		"status": 0,
+	}).Error; err != nil {
 		c.JSON(500, gin.H{"error": "删除文件失败"})
 		return
 	}
