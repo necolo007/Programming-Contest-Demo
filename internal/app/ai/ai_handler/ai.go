@@ -3,18 +3,22 @@ package ai_handler
 import (
 	"Programming-Demo/core/client"
 	"Programming-Demo/core/gin/dbs"
+	"Programming-Demo/core/libx"
 	"Programming-Demo/internal/app/File/file_entity"
 	"Programming-Demo/internal/app/ai/ai_dto"
+	"Programming-Demo/internal/app/ai/ai_entity"
 	"Programming-Demo/pkg/utils/ai"
 	"Programming-Demo/pkg/utils/deepseek"
 	"Programming-Demo/pkg/utils/prompt"
 	"context"
 	"errors"
-	"github.com/gin-gonic/gin"
-	"github.com/northes/go-moonshot"
 	"io"
 	"net/http"
 	"os"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/northes/go-moonshot"
 )
 
 func PingMoonshot(c *gin.Context) {
@@ -188,6 +192,7 @@ func GenerateComplaint(c *gin.Context) {
 }
 
 func ChatWithAi(c *gin.Context) {
+	uid := libx.Uid(c)
 	var req ai_dto.ChatReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -197,21 +202,99 @@ func ChatWithAi(c *gin.Context) {
 		})
 		return
 	}
+
+	// 获取历史对话记录
+	var histories []ai_entity.ChatHistory
+	dbs.DB.Where("user_id = ?", uid).
+		Order("created_at desc").
+		Limit(5).
+		Find(&histories)
+
+	// 构建对话上下文
+	var messages []string
+	for i := len(histories) - 1; i >= 0; i-- {
+		messages = append(messages, histories[i].Content)
+	}
+	messages = append(messages, req.Content)
+
+	// 将当前问题保存到历史记录
+	userMessage := ai_entity.ChatHistory{
+		UserID:  uid,
+		Model:   req.Model,
+		Theme:   req.Theme,
+		Role:    "user",
+		Content: req.Content,
+	}
+	dbs.DB.Create(&userMessage)
+
 	var Resp string
 	var code int
+
 	// 选择不同的 AI 模型处理
 	switch req.Model {
 	case "moonshot":
-		Resp, code = ai.GetAIResp(req.Content)
+		Resp, code = ai.GetAIResp(strings.Join(messages, "\n"))
 	case "deepseek-chat", "deepseek-reasoner":
-		Resp, code = deepseek.ChatWithDeepSeek(req.Content, "POST", req.Model)
+		Resp, code = deepseek.ChatWithDeepSeek(strings.Join(messages, "\n"), "POST", req.Model)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"message": "模型错误"})
 		return
 	}
+
 	if code != 200 {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "调用ai接口失败", "error": Resp})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": code, "message": Resp})
+
+	// 保存 AI 回复到历史记录
+	aiMessage := ai_entity.ChatHistory{
+		UserID:  uid,
+		Model:   req.Model,
+		Theme:   req.Theme,
+		Role:    "assistant",
+		Content: Resp,
+	}
+	dbs.DB.Create(&aiMessage)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    code,
+		"message": Resp,
+		"history": histories,
+	})
+}
+
+func GetChatHistory(c *gin.Context) {
+	uid := libx.Uid(c)
+	theme := c.Query("theme")
+	var histories []ai_entity.ChatHistory
+	if err := dbs.DB.Where("user_id = ? and theme = ?", uid, theme).
+		Order("created_at desc").
+		Find(&histories).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "获取历史记录失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "success",
+		"data":    histories,
+	})
+}
+
+func GetChatThemes(c *gin.Context) {
+	uid := libx.Uid(c)
+	var themes []string
+	if err := dbs.DB.Model(&ai_entity.ChatHistory{}).
+		Where("user_id = ?", uid).
+		Select("distinct theme").
+		Pluck("theme", &themes).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "获取主题失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "success",
+		"data":    themes,
+	})
 }

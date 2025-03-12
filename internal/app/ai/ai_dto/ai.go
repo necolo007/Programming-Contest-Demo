@@ -3,7 +3,9 @@ package ai_dto
 type ChatReq struct {
 	Model   string `json:"model"`
 	Content string `json:"content"`
+	Theme   string `gorm:"not null" json:"theme"`
 }
+
 type AnalyzeReq struct {
 	Model string `json:"model"`
 	Name  string `json:"name"`
