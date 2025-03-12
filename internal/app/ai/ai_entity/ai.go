@@ -1,9 +1,13 @@
 package ai_entity
 
-import "net/http"
+import "time"
 
-type MoonshotClient struct {
-	apiKey     string
-	httpClient *http.Client
-	baseURL    string
+type ChatHistory struct {
+	ID        uint      `gorm:"primarykey" json:"id"`
+	UserID    uint      `gorm:"not null" json:"user_id"`
+	Theme     string    `gorm:"size:50;not null" json:"theme"`
+	Model     string    `gorm:"size:50;not null" json:"model"`
+	Role      string    `gorm:"size:20;not null" json:"role"`
+	Content   string    `gorm:"type:text;not null" json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }

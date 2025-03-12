@@ -19,13 +19,15 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		userGroup.POST("/login", user_handler.Login)
 		userGroup.POST("/logout", web.JWTAuthMiddleware(), user_handler.Logout)
 	}
-	aiGroup := r.Group("/api/ai")
+	aiGroup := r.Group("/api/ai", web.JWTAuthMiddleware())
 	{
-		aiGroup.POST("/analyze", web.JWTAuthMiddleware(), ai_handler.AnalyzeFile)
-		aiGroup.POST("/contract", web.JWTAuthMiddleware(), ai_handler.GenerateLegalDocument)
-		aiGroup.POST("/complain", web.JWTAuthMiddleware(), ai_handler.GenerateComplaint)
-		aiGroup.POST("/opinion", web.JWTAuthMiddleware(), ai_handler.GenerateLegalOpinion)
-		aiGroup.POST("/chat", web.JWTAuthMiddleware(), ai_handler.ChatWithAi)
+		aiGroup.POST("/analyze", ai_handler.AnalyzeFile)
+		aiGroup.POST("/contract", ai_handler.GenerateLegalDocument)
+		aiGroup.POST("/complain", ai_handler.GenerateComplaint)
+		aiGroup.POST("/opinion", ai_handler.GenerateLegalOpinion)
+		aiGroup.POST("/chat", ai_handler.ChatWithAi)
+		aiGroup.GET("/history", ai_handler.GetChatHistory)
+		aiGroup.GET("/theme", ai_handler.GetChatThemes)
 	}
 	// 管理员相关路由
 	adminGroup := r.Group("/api/admin", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
@@ -34,11 +36,11 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		// 管理员可以获取所有用户信息
 		adminGroup.GET("/users", user_handler.GetAllUsers)
 	}
-	fileGroup := r.Group("/api/file", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
+	fileGroup := r.Group("/api/file", web.JWTAuthMiddleware())
 	{
-		fileGroup.POST("/upload", web.JWTAuthMiddleware(), file_handler.UploadFileHandler)
-		fileGroup.GET("/download/:id", web.JWTAuthMiddleware(), file_handler.DownloadFileHandler)
-		fileGroup.DELETE("/delete/:id", web.JWTAuthMiddleware(), file_handler.DeleteFileHandler)
+		fileGroup.POST("/upload", file_handler.UploadFileHandler)
+		fileGroup.GET("/download/:id", file_handler.DownloadFileHandler)
+		fileGroup.DELETE("/delete/:id", file_handler.DeleteFileHandler)
 		// 文件搜索相关路由
 		searchGroup := fileGroup.Group("/search")
 		{

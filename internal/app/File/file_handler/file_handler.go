@@ -87,7 +87,7 @@ func UploadFileHandler(c *gin.Context) {
 		return
 	}
 
-	// 生成存储路径
+	// 生成存储路径*********************
 	savePath := fmt.Sprintf("uploads/%d_%s%s", time.Now().Unix(), hash[:8], ext)
 
 	// 确保 `uploads/` 目录存在
