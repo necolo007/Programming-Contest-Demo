@@ -189,7 +189,7 @@ func DownloadFileHandler(c *gin.Context) {
 
 // 文件删除
 func DeleteFileHandler(c *gin.Context) {
-	fileID := c.Param("file_id")
+	fileID := c.Param("id")
 	uid := libx.Uid(c)
 
 	// 查找文件
