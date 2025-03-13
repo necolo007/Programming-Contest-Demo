@@ -137,8 +137,8 @@ func UploadFileHandler(c *gin.Context) {
 
 // 文件下载
 func DownloadFileHandler(c *gin.Context) {
-	fileID := c.Param("file_id") // 获取文件ID
-	uid := libx.Uid(c)           // 获取当前用户的ID
+	fileID := c.Param("id") // 获取文件ID
+	uid := libx.Uid(c)      // 获取当前用户的ID
 
 	// 查找文件
 	var file file_entity.File
