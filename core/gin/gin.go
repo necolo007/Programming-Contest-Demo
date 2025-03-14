@@ -1,6 +1,7 @@
 package gin
 
 import (
+	"Programming-Demo/core/Bocha_client"
 	"Programming-Demo/core/auth"
 	"Programming-Demo/core/client"
 	"Programming-Demo/core/gin/dbs"
@@ -12,6 +13,7 @@ func GinInit() *gin.Engine {
 	r := gin.Default()
 	dbs.InitDB()
 	client.InitClient()
+	bochalient.InitBochaClient()
 	router.GenerateRouters(r)
 
 	auth.InitSecret()

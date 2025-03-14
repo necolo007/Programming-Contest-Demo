@@ -15,6 +15,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&file_entity.File{},
 		&ai_entity.ChatHistory{},
 		&template_entity.LegalTemplate{},
+		&ai_entity.ChatHistory{},
+		&ai_entity.ChatTheme{},
 	)
 	return err
 }

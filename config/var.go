@@ -1,17 +1,18 @@
 package config
 
 type GlobalConfig struct {
-	AppName     string `yaml:"AppName"`
-	MODE        string `yaml:"Mode"`
-	ProgramName string `yaml:"ProgramName"`
-	AUTHOR      string `yaml:"Author"`
-	VERSION     string `yaml:"Version"`
-	Host        string `yaml:"Host"`
-	Port        string `yaml:"Port"`
-	Apikey      string `yaml:"Apikey"`
-	DeepSeekKey string `yaml:"DeepSeekKey"`
-	LogPath     string `yaml:"LogPath"`
-	Auth        struct {
+	AppName      string `yaml:"AppName"`
+	MODE         string `yaml:"Mode"`
+	ProgramName  string `yaml:"ProgramName"`
+	AUTHOR       string `yaml:"Author"`
+	VERSION      string `yaml:"Version"`
+	Host         string `yaml:"Host"`
+	Port         string `yaml:"Port"`
+	Apikey       string `yaml:"Apikey"`
+	DeepSeekKey  string `yaml:"DeepSeekKey"`
+	BOCHA_Apikey string `yaml:"BOCHA_Apikey"`
+	LogPath      string `yaml:"LogPath"`
+	Auth         struct {
 		Secret string `yaml:"Secret"`
 		Issuer string `yaml:"Issuer"`
 	} `yaml:"Auth"`
