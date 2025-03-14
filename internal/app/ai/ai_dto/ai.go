@@ -86,3 +86,7 @@ type GenerateLegalOpinionReq struct {
 	Model   string           `json:"model"`   // AI模型
 	Content LegalOpinionBase `json:"content"` // 法律意见书内容
 }
+
+type SearchRequest struct {
+	Query string `json:"query"`
+}
