@@ -11,10 +11,10 @@ import (
 func AutoMigrate(db *gorm.DB) error {
 	err := db.AutoMigrate(
 		&user_entity.User{},
-		&user_entity.Token{},
 		&file_entity.File{},
 		&ai_entity.ChatHistory{},
 		&template_entity.LegalTemplate{},
+		&ai_entity.VectorDocument{},
 	)
 	return err
 }
