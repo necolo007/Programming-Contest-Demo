@@ -12,6 +12,7 @@ import (
 	"Programming-Demo/pkg/utils/prompt"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -297,4 +298,91 @@ func GetChatThemes(c *gin.Context) {
 		"message": "success",
 		"data":    themes,
 	})
+}
+
+func SearchWithMoonshot(c *gin.Context) {
+	// 从请求中获取查询参数，不再设置默认值
+	query := c.Query("query")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "搜索栏不能为空"})
+		return
+	}
+
+	// 获取封装好的 Moonshot 客户端实例
+	getClient := client.MoonClient.GetClient()
+
+	// 创建请求结构体，设置必要的参数
+	req := moonshot.ChatCompletionsRequest{
+		Model: moonshot.ModelMoonshotV18K,
+		Messages: []*moonshot.ChatCompletionsMessage{
+			{
+				Role:    moonshot.RoleSystem,
+				Content: fmt.Sprintf("Search the web for: %s", query),
+			},
+		},
+		Temperature: 0.3,
+		Stream:      false,
+		Tools: []*moonshot.ChatCompletionsTool{
+			{
+				Type: moonshot.ChatCompletionsToolTypeBuiltinFunction,
+				Function: &moonshot.ChatCompletionsToolFunction{
+					Name: "$web_search",
+				},
+			},
+		},
+	}
+
+	// 发送请求并获取响应
+	resp, err := getClient.Chat().Completions(context.Background(), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "message": "moonshot chat failed"})
+		return
+	}
+
+	// 检查是否需要调用工具
+	if resp.Choices[0].FinishReason == "tool_calls" {
+		// 获取工具调用参数
+		toolCalls := resp.Choices[0].Message.ToolCalls
+		for _, toolCall := range toolCalls {
+			if toolCall.Function.Name == "$web_search" {
+				// 将工具调用参数返回给模型
+				toolResult := toolCall.Function.Arguments
+
+				// 构造新的请求，包含工具调用结果
+				newReq := moonshot.ChatCompletionsRequest{
+					Model: moonshot.ModelMoonshotV18K,
+					Messages: []*moonshot.ChatCompletionsMessage{
+						{
+							Role:    moonshot.RoleTool,
+							Content: toolResult,
+						},
+					},
+					Temperature: 0.3,
+					Stream:      false,
+				}
+
+				// 发送新的请求
+				newResp, err := getClient.Chat().Completions(context.Background(), &newReq)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "message": "moonshot chat failed"})
+					return
+				}
+
+				// 返回最终结果
+				if newResp.Choices[0].Message.Content != "" {
+					c.JSON(http.StatusOK, gin.H{"message": newResp.Choices[0].Message.Content})
+					return
+				}
+			}
+		}
+	} else {
+		// 如果不需要调用工具，直接返回结果
+		if resp.Choices[0].Message.Content != "" {
+			c.JSON(http.StatusOK, gin.H{"message": resp.Choices[0].Message.Content})
+			return
+		}
+	}
+
+	// 如果没有结果
+	c.JSON(http.StatusOK, gin.H{"message": "No results found."})
 }
