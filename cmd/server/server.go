@@ -6,16 +6,18 @@ import (
 	"Programming-Demo/core/gin"
 	"Programming-Demo/core/kernel"
 	"Programming-Demo/pkg/ip"
+	"Programming-Demo/pkg/utils/ai"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -83,6 +85,12 @@ func Run() {
 			color.Red("Server Error: %s", err.Error())
 		}
 	}()
+
+	batchSize := 1024 // 批量导入大小
+	err := ai.ImportCSVToMilvus("40000条法律问答数据集.csv", batchSize)
+	if err != nil {
+		color.Red("Import dataset error: %s", err.Error())
+	}
 
 	// 打印服务器启动信息
 	color.Green("Server running at:")

@@ -31,6 +31,7 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		aiGroup.GET("/history", ai_handler.GetChatHistory)
 		aiGroup.GET("/theme", ai_handler.GetChatThemes)
 		aiGroup.GET("/search", ai_handler.SearchWithMoonshot)
+		aiGroup.POST("/opinion/more", ai_handler.GenerateLegalOpinionBetter)
 	}
 	// 管理员相关路由
 	adminGroup := r.Group("/api/admin", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
