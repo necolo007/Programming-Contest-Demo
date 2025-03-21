@@ -6,7 +6,6 @@ import (
 	"Programming-Demo/core/gin"
 	"Programming-Demo/core/kernel"
 	"Programming-Demo/pkg/ip"
-	"Programming-Demo/pkg/utils/ai"
 	"context"
 	"errors"
 	"fmt"
@@ -86,11 +85,11 @@ func Run() {
 		}
 	}()
 
-	batchSize := 1024 // 批量导入大小
-	err := ai.ImportCSVToMilvus("40000条法律问答数据集.csv", batchSize)
-	if err != nil {
-		color.Red("Import dataset error: %s", err.Error())
-	}
+	//batchSize := 100 // 批量导入大小
+	//err := ai.ImportCSVToMilvus("40000条法律问答数据集.csv", batchSize)
+	//if err != nil {
+	//	color.Red("Import dataset error: %s", err.Error())
+	//}
 
 	// 打印服务器启动信息
 	color.Green("Server running at:")
