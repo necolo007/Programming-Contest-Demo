@@ -10,6 +10,7 @@ import (
 	"github.com/northes/go-moonshot"
 	"io"
 	"log"
+	"time"
 )
 
 // Document 定义文档结构体
@@ -21,6 +22,7 @@ type Document struct {
 
 // GenerateEmbedding 生成文本向量
 func GenerateEmbedding(text string) ([]float64, error) {
+	time.Sleep(50 * time.Millisecond)
 	vectors := aliyun.NplApi(text)
 	return vectors, nil
 }

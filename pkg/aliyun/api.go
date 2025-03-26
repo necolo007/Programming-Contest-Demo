@@ -1,9 +1,8 @@
 package aliyun
 
 import (
-	"Programming-Demo/config"
+	"Programming-Demo/core/aliy"
 	"encoding/json"
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 )
 
@@ -21,10 +20,6 @@ type InnerData struct {
 }
 
 func NplApi(s string) []float64 {
-	client, err := sdk.NewClientWithAccessKey("cn-hangzhou", config.GetConfig().AccessKeyID, config.GetConfig().AccessKeySecret)
-	if err != nil {
-		panic(err)
-	}
 	request := requests.NewCommonRequest()
 	request.Domain = "alinlp.cn-hangzhou.aliyuncs.com"
 	request.Version = "2020-06-29"
@@ -33,7 +28,7 @@ func NplApi(s string) []float64 {
 	request.QueryParams["ServiceCode"] = "alinlp"
 	request.QueryParams["Text"] = s
 	request.QueryParams["TokenizerId"] = "GENERAL_CHN"
-	response, err := client.ProcessCommonRequest(request)
+	response, err := aliy.AliyunClient.GetClient().ProcessCommonRequest(request)
 	if err != nil {
 		panic(err)
 	}

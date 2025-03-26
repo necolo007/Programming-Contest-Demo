@@ -2,129 +2,228 @@ package ai
 
 import (
 	"Programming-Demo/core/milvus"
-	"encoding/csv" // 在 main 函数或应用启动处添加
+	"encoding/csv"
 	"fmt"
-	"log"
+	"github.com/fatih/color"
+	"github.com/schollz/progressbar/v3"
+	"math"
+	"math/rand"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
-// ImportCSVToMilvus 将CSV文件数据导入到Milvus
-func ImportCSVToMilvus(filePath string, batchSize int) error {
-	// 打开CSV文件
-	file, err := os.Open(filePath)
+// ImportCSVToMilvusWithThrottle 导入CSV数据到Milvus，同时对阿里云API实施适当速率限制
+func ImportCSVToMilvusWithThrottle(filepath string, batchSize int) error {
+	file, err := os.Open(filepath)
 	if err != nil {
-		return fmt.Errorf("无法打开文件: %v", err)
+		return fmt.Errorf("无法打开CSV文件: %v", err)
 	}
 	defer file.Close()
 
-	// 配置CSV读取器
 	reader := csv.NewReader(file)
 	reader.Comma = ','
 	reader.LazyQuotes = true
-	reader.TrimLeadingSpace = true
-	reader.FieldsPerRecord = -1
 
-	// 读取所有记录
 	records, err := reader.ReadAll()
 	if err != nil {
-		return fmt.Errorf("读取CSV文件失败: %v", err)
+		return fmt.Errorf("读取CSV内容失败: %v", err)
 	}
 
-	log.Printf("读取到 %d 条记录，开始处理...", len(records))
+	// 跳过标题行
+	records = records[1:]
+	total := len(records)
+	color.Blue("共读取 %d 条记录", total)
 
-	// 批量处理
-	totalCount := len(records)
-	processedCount := 0
-	startTime := time.Now()
+	// 创建速率限制器 - 优化为15 QPS
+	rateLimiter := time.NewTicker(250 * time.Millisecond)
+	defer rateLimiter.Stop()
 
-	for i := 0; i < totalCount; i += batchSize {
-		endIndex := i + batchSize
-		if endIndex > totalCount {
-			endIndex = totalCount
+	// 并发控制 - 根据阿里云API实际限制调整
+	sem := make(chan struct{}, 6)
+
+	// 错误和完成通道
+	errChan := make(chan error, 1)
+	doneChan := make(chan bool, 1)
+
+	totalBatches := (total + batchSize - 1) / batchSize
+	processedBatches := 0
+	var mu sync.Mutex // 用于保护processedBatches
+
+	// 创建进度条
+	// 创建进度条
+	bar := progressbar.NewOptions(total,
+		progressbar.OptionSetDescription("导入进度"),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+	)
+
+	// 分批处理
+	for i := 0; i < total; i += batchSize {
+		batchEnd := i + batchSize
+		if batchEnd > total {
+			batchEnd = total
 		}
 
-		batch := records[i:endIndex]
-		err = processBatch(batch, int64(i+1))
-		if err != nil {
-			return fmt.Errorf("处理批次 %d-%d 失败: %v", i, endIndex-1, err)
-		}
+		batch := records[i:batchEnd]
+		startID := int64(i)
+		batchNum := (i / batchSize) + 1
 
-		processedCount += len(batch)
-		elapsed := time.Since(startTime)
-		log.Printf("已处理 %d/%d 条记录 (%.2f%%), 耗时: %v",
-			processedCount, totalCount, float64(processedCount)/float64(totalCount)*100, elapsed)
+		// 等待速率限制器的信号
+		<-rateLimiter.C
+
+		// 获取信号量槽位
+		sem <- struct{}{}
+
+		go func(b [][]string, id int64, num int, size int) {
+			defer func() { <-sem }() // 完成时释放信号量
+
+			if err := processBatchWithRetry(b, id); err != nil {
+				select {
+				case errChan <- fmt.Errorf("处理批次 %d 失败: %v", num, err):
+				default:
+					// 避免阻塞
+				}
+				return
+			}
+
+			// 更新进度
+			bar.Add(size)
+
+			mu.Lock()
+			processedBatches++
+			currentProgress := processedBatches
+			mu.Unlock()
+
+			if currentProgress%10 == 0 || currentProgress == totalBatches {
+				color.Green("已完成 %d/%d 批次 (%.1f%%)",
+					currentProgress, totalBatches, float64(currentProgress)/float64(totalBatches)*100)
+			}
+
+			if currentProgress == totalBatches {
+				doneChan <- true
+			}
+		}(batch, startID, batchNum, len(batch))
 	}
 
-	log.Printf("数据导入完成，总耗时: %v", time.Since(startTime))
-	return nil
+	// 等待完成或错误
+	select {
+	case err := <-errChan:
+		return err
+	case <-doneChan:
+		color.Green("成功导入 %d 条记录到 Milvus", total)
+		return nil
+	}
 }
 
-// processBatch 处理一批记录
+// processBatchWithRetry 使用指数退避重试处理批次
+func processBatchWithRetry(records [][]string, startID int64) error {
+	maxRetries := 5
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		// 为重试添加指数退避延迟
+		if attempt > 0 {
+			// 退避时间 = 2^尝试次数 * (800 + [0, 400)ms)重试抖动
+			backoff := time.Duration(math.Pow(2, float64(attempt))*float64(800+rand.Intn(400))) * time.Millisecond
+			color.Yellow("重试 %d/%d，等待 %v...", attempt+1, maxRetries, backoff)
+			time.Sleep(backoff)
+		}
+
+		err := processBatch(records, startID)
+		if err == nil {
+			return nil
+		}
+
+		if strings.Contains(err.Error(), "Throttling.User") {
+			// 对于用户限流错误，使用更长的退避时间
+			backoff := time.Duration(math.Pow(2, float64(attempt+2))) * time.Second
+			color.Yellow("用户请求限流，等待较长时间: %v", backoff)
+			time.Sleep(backoff)
+			continue
+		}
+
+		// 处理速率限制相关的错误
+		if strings.Contains(err.Error(), "ServiceUnavailable") ||
+			strings.Contains(err.Error(), "Throttling") ||
+			strings.Contains(err.Error(), "RequestThrottled") ||
+			strings.Contains(err.Error(), "TooManyRequests") {
+			color.Yellow("API请求被限制，正在重试: %v", err)
+			continue
+		}
+
+		// 对于其他错误，减少重试次数
+		if attempt >= 2 {
+			return err
+		}
+	}
+
+	return fmt.Errorf("达到最大重试次数 %d 后仍失败", maxRetries)
+}
+
+// processBatch 使用子批次处理单个批次
 func processBatch(records [][]string, startID int64) error {
-	var vectors [][]float32
-	var ids []int64
-	var contents []string
+	// 准备嵌入数据
+	questions := make([]string, 0, len(records))
+	answers := make([]string, 0, len(records))
+	ids := make([]int64, 0, len(records))
 
 	for i, record := range records {
 		if len(record) < 2 {
 			continue
 		}
-
-		// 清洗和处理文本
-		question := cleanText(record[0])
-		answer := ""
-		if len(record) > 1 {
-			answer = cleanText(record[1])
-		}
-
-		// 合并问题和答案作为内容
-		content := fmt.Sprintf("问题: %s\n答案: %s", question, answer)
-
-		// 生成向量嵌入
-		embedding, err := GenerateEmbedding(question)
-		if err != nil {
-			log.Printf("生成向量嵌入失败: %v，跳过该记录", err)
-			continue
-		}
-
-		// 转换向量类型 float64 -> float32
-		vector := make([]float32, len(embedding))
-		for j, v := range embedding {
-			vector[j] = float32(v)
-		}
-
-		vectors = append(vectors, vector)
-		contents = append(contents, content)
+		questions = append(questions, record[0])
+		answers = append(answers, record[1])
 		ids = append(ids, startID+int64(i))
 	}
 
-	// 检查是否有数据需要插入
-	if len(vectors) == 0 {
-		log.Printf("没有可用的向量数据需要插入")
-		return nil
+	// 使用更小的子批次（每次API调用2项）
+	subBatchSize := 2
+	vectors := make([][]float32, 0, len(questions))
+
+	// 顺序处理每个子批次，中间添加短暂延迟
+	for i := 0; i < len(questions); i += subBatchSize {
+		end := i + subBatchSize
+		if end > len(questions) {
+			end = len(questions)
+		}
+
+		// 提取当前子批次的问题
+		currentBatch := questions[i:end]
+
+		// 为每个问题单独生成嵌入向量
+		for _, question := range currentBatch {
+			// GenerateEmbedding 接受单个字符串并返回 []float64
+			embedding, err := GenerateEmbedding(question)
+			if err != nil {
+				return fmt.Errorf("获取嵌入向量失败: %v", err)
+			}
+
+			// 将 []float64 转换为 []float32
+			embedding32 := make([]float32, len(embedding))
+			for j, val := range embedding {
+				embedding32[j] = float32(val)
+			}
+
+			// 正确地将向量作为一个元素追加到vectors中
+			vectors = append(vectors, embedding32)
+		}
+
+		// 在子批次之间添加小延迟
+		if end < len(questions) {
+			time.Sleep(500 * time.Millisecond)
+		}
 	}
 
-	log.Printf("开始插入%d向量数据...", len(vectors))
-	if !milvus.IsClientInit() {
-		return fmt.Errorf("milvus客户端未正确初始化")
-	}
-	// 插入向量数据到Milvus
-	// 注意: InsertVectors参数顺序为 vectors, contents
-	err := milvus.InsertVectors(vectors, contents)
-	if err != nil {
-		return fmt.Errorf("插入向量数据失败: %v", err)
+	// 插入到Milvus
+	textData := make([]string, len(questions)+len(answers))
+	copy(textData, questions)
+	copy(textData[len(questions):], answers)
+
+	if err := milvus.InsertVectors(vectors, textData); err != nil {
+		return fmt.Errorf("插入Milvus失败: %v", err)
 	}
 
 	return nil
-}
-
-// cleanText 清洗文本
-func cleanText(text string) string {
-	// 去除多余空白字符
-	text = strings.TrimSpace(text)
-	// 去除重复的换行符
-	text = strings.ReplaceAll(text, "\n\n", "\n")
-	return text
 }

@@ -31,7 +31,6 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		aiGroup.GET("/theme", ai_handler.GetChatThemes)
 		aiGroup.DELETE("/delete", ai_handler.DeleteChatTheme)
 		aiGroup.GET("/search", ai_handler.AiSearch)
-		aiGroup.GET("/search", ai_handler.SearchWithMoonshot)
 		aiGroup.POST("/opinion/more", ai_handler.GenerateLegalOpinionBetter)
 	}
 	// 管理员相关路由
