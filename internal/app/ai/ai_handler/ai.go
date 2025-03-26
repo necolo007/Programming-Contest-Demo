@@ -163,7 +163,6 @@ func ChatWithAi(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    code,
 		"message": Resp,
-		"history": histories,
 	})
 }
 
@@ -657,7 +656,6 @@ func AiSearch(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": resp,
-		"history": histories,
 	})
 }
 
