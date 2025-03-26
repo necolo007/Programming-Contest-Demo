@@ -5,13 +5,10 @@ import (
 	"Programming-Demo/core/database"
 	"Programming-Demo/core/gin"
 	"Programming-Demo/core/kernel"
-	"Programming-Demo/core/milvus"
 	"Programming-Demo/pkg/ip"
-	"Programming-Demo/pkg/utils/ai"
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -88,29 +85,29 @@ func Run() {
 		}
 	}()
 
-	// 在单独的goroutine中导入CSV数据
-	go func() {
-		log.Println("开始导入数据集，这需要一点时间，请耐心等待...")
-
-		// 初始化Milvus集合
-		ctx := context.Background()
-		if err := milvus.LoadCollection(ctx); err != nil {
-			color.Red("加载 Milvus 集合失败: %s", err.Error())
-			return
-		}
-
-		// 更小的批量大小，便于更好地管理
-		batchSize := 5
-
-		// 使用带速率限制的优化导入函数
-		err := ai.ImportCSVToMilvusWithThrottle("40000条法律问答数据集.csv", batchSize)
-		if err != nil {
-			color.Red("导入数据集错误: %s", err.Error())
-			return
-		}
-
-		color.Green("数据集导入完成!")
-	}()
+	//// 在单独的goroutine中导入CSV数据
+	//go func() {
+	//	log.Println("开始导入数据集，这需要一点时间，请耐心等待...")
+	//
+	//	// 初始化Milvus集合
+	//	ctx := context.Background()
+	//	if err := milvus.LoadCollection(ctx); err != nil {
+	//		color.Red("加载 Milvus 集合失败: %s", err.Error())
+	//		return
+	//	}
+	//
+	//	// 更小的批量大小，便于更好地管理
+	//	batchSize := 5
+	//
+	//	// 使用带速率限制的优化导入函数
+	//	err := ai.ImportCSVToMilvusWithThrottle("40000条法律问答数据集.csv", batchSize)
+	//	if err != nil {
+	//		color.Red("导入数据集错误: %s", err.Error())
+	//		return
+	//	}
+	//
+	//	color.Green("数据集导入完成!")
+	//}()
 
 	// 打印服务器启动信息
 	color.Green("Server running at:")
