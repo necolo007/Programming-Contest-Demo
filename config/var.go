@@ -1,18 +1,20 @@
 package config
 
 type GlobalConfig struct {
-	AppName      string `yaml:"AppName"`
-	MODE         string `yaml:"Mode"`
-	ProgramName  string `yaml:"ProgramName"`
-	AUTHOR       string `yaml:"Author"`
-	VERSION      string `yaml:"Version"`
-	Host         string `yaml:"Host"`
-	Port         string `yaml:"Port"`
-	Apikey       string `yaml:"Apikey"`
-	DeepSeekKey  string `yaml:"DeepSeekKey"`
-	BOCHA_Apikey string `yaml:"BOCHA_Apikey"`
-	LogPath      string `yaml:"LogPath"`
-	Auth         struct {
+	AppName         string `yaml:"AppName"`
+	MODE            string `yaml:"Mode"`
+	ProgramName     string `yaml:"ProgramName"`
+	AUTHOR          string `yaml:"Author"`
+	VERSION         string `yaml:"Version"`
+	Host            string `yaml:"Host"`
+	Port            string `yaml:"Port"`
+	Apikey          string `yaml:"Apikey"`
+	AccessKeyID     string `yaml:"AccessKeyID"`
+	AccessKeySecret string `yaml:"AccessKeySecret"`
+	DeepSeekKey     string `yaml:"DeepSeekKey"`
+  BOCHA_Apikey string `yaml:"BOCHA_Apikey"`
+	LogPath         string `yaml:"LogPath"`
+	Auth            struct {
 		Secret string `yaml:"Secret"`
 		Issuer string `yaml:"Issuer"`
 	} `yaml:"Auth"`
@@ -31,6 +33,12 @@ type GlobalConfig struct {
 		//关键点：不要留secret，甚至是_secret也不行
 		JwtSecret string `yaml:"jwtsecret"`
 	} `yaml:"jwt"`
+	Milvus struct {
+		Host       string `yaml:"host"`
+		Port       int    `yaml:"port"`
+		Collection string `yaml:"collection"`
+		Dim        int    `yaml:"dim"`
+	} `yaml:"milvus"`
 }
 
 type Datasource struct {

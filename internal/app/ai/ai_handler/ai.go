@@ -660,3 +660,22 @@ func AiSearch(c *gin.Context) {
 		"history": histories,
 	})
 }
+
+func GenerateLegalOpinionBetter(c *gin.Context) {
+	var req ai_dto.GenerateLegalOpinionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "参数错误",
+			"error":   err.Error(),
+		})
+		return
+	}
+	p := prompt.BuildLegalOpinionPrompt(req)
+	resp, code, docs := ai.GetAIRespMore(p)
+	if code != 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "调用ai接口失败", "error": resp})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": code, "message": resp, "docs": docs})
+}

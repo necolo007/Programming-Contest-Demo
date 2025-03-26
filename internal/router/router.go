@@ -5,6 +5,7 @@ import (
 	"Programming-Demo/internal/app/File/file_handler"
 	"Programming-Demo/internal/app/ai/ai_handler"
 	"Programming-Demo/internal/app/file_search/search_handler"
+	"Programming-Demo/internal/app/story/story_handler"
 	"Programming-Demo/internal/app/template/template_handler"
 	"Programming-Demo/internal/app/user/user_handler"
 
@@ -30,6 +31,8 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		aiGroup.GET("/theme", ai_handler.GetChatThemes)
 		aiGroup.DELETE("/delete", ai_handler.DeleteChatTheme)
 		aiGroup.GET("/search", ai_handler.AiSearch)
+		aiGroup.GET("/search", ai_handler.SearchWithMoonshot)
+		aiGroup.POST("/opinion/more", ai_handler.GenerateLegalOpinionBetter)
 	}
 	// 管理员相关路由
 	adminGroup := r.Group("/api/admin", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())
@@ -52,10 +55,16 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 			searchGroup.GET("/type", search_handler.SearchFileByTypeHandler)       // 按文件类型搜索
 			searchGroup.GET("/content", search_handler.SearchFileByContentHandler) // 按文件内容搜索
 		}
+		templateGroup := r.Group("/api/template", web.JWTAuthMiddleware())
+		{
+			templateGroup.POST("/upload", web.AdminAuthMiddleware(), template_handler.CreateTemplateHandler)
+		}
+		storyGroup := r.Group("/api/story", web.JWTAuthMiddleware())
+		{
+			storyGroup.POST("/create", story_handler.CreateStory)
+			storyGroup.GET("/get", story_handler.GetRandomStory)
+
+		}
+		return r
 	}
-	templateGroup := r.Group("/api/template", web.JWTAuthMiddleware())
-	{
-		templateGroup.POST("/upload", web.AdminAuthMiddleware(), template_handler.CreateTemplateHandler)
-	}
-	return r
 }
