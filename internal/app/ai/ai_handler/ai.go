@@ -1,6 +1,7 @@
 package ai_handler
 
 import (
+	bochalient "Programming-Demo/core/Bocha_client"
 	"Programming-Demo/core/gin/dbs"
 	"Programming-Demo/core/libx"
 	"Programming-Demo/internal/app/File/file_entity"
@@ -8,6 +9,7 @@ import (
 	"Programming-Demo/internal/app/ai/ai_entity"
 	"Programming-Demo/internal/app/ai/ai_service"
 	"Programming-Demo/pkg/utils/ai"
+	"Programming-Demo/pkg/utils/bocha"
 	"Programming-Demo/pkg/utils/deepseek"
 	"Programming-Demo/pkg/utils/prompt"
 	"fmt"
@@ -453,208 +455,208 @@ func GenerateComplaint(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": code, "message": Resp})
 }
 
-//// BoTool 博查AI搜索工具定义
-//type BoTool struct {
-//	Type     string `json:"type"`
-//	Function BoDef  `json:"function"`
-//}
+// BoTool 博查AI搜索工具定义
+type BoTool struct {
+	Type     string `json:"type"`
+	Function BoDef  `json:"function"`
+}
 
-//// BoDef 博查AI搜索函数定义
-//type BoDef struct {
-//	Name        string `json:"name"`
-//	Description string `json:"description,omitempty"`
-//}
-//
-//// BochaSearchRequest 博查搜索请求结构
-//type BochaSearchRequest struct {
-//	Query     string `json:"query"`
-//	Freshness string `json:"freshness"`
-//	Summary   bool   `json:"summary"`
-//	Count     int    `json:"count"`
-//	Page      int    `json:"page"`
-//}
+// BoDef 博查AI搜索函数定义
+type BoDef struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+}
 
-//// DeepSeek和博查API实现联网搜索
-//func AiSearch(c *gin.Context) {
-//	uid := libx.Uid(c)
-//	var req ai_dto.ChatReq
-//	if err := c.ShouldBindJSON(&req); err != nil {
-//		c.JSON(http.StatusBadRequest, gin.H{
-//			"code":    400,
-//			"message": "参数错误",
-//			"error":   err.Error(),
-//		})
-//		return
-//	}
-//
-//	// 检查博查客户端是否已初始化
-//	if bochalient.BochaClient == nil {
-//		c.JSON(http.StatusBadRequest, gin.H{
-//			"code":    400,
-//			"message": "联网搜索功能未配置，请设置BOCHA_API_KEY环境变量",
-//		})
-//		return
-//	}
-//
-//	// 初始化Ristretto缓存
-//	if err := ai_service.InitCache(); err != nil {
-//		fmt.Printf("Failed to initialize cache: %v\n", err)
-//	}
-//
-//	// 尝试从缓存加载历史记录
-//	cache, err := ai_service.LoadChatCache(uid, req.Theme)
-//	var histories []ai_entity.ChatHistory
-//
-//	if err != nil || !ai_service.IsCacheValid(cache, CacheExpiration) {
-//		// 缓存不可用，从数据库加载
-//		histories, err = ai_service.GetRecentChatHistoryByTheme(uid, req.Theme, DefaultContextMessageCount)
-//		if err != nil {
-//			fmt.Printf("Failed to get chat history: %v\n", err)
-//			histories = []ai_entity.ChatHistory{}
-//		}
-//	} else {
-//		// 使用缓存的消息
-//		histories = cache.Messages
-//	}
-//
-//	// 限制上下文消息数量
-//	contextCount := DefaultContextMessageCount
-//	if len(histories) > contextCount {
-//		histories = histories[len(histories)-contextCount:]
-//	}
-//
-//	// 保存当前用户消息到历史记录
-//	userMessage := ai_entity.ChatHistory{
-//		UserID:  uid,
-//		Model:   req.Model,
-//		Theme:   req.Theme,
-//		Role:    "user",
-//		Content: req.Content,
-//	}
-//
-//	// 使用事务确保数据一致性
-//	tx := dbs.DB.Begin()
-//	if err := tx.Create(&userMessage).Error; err != nil {
-//		tx.Rollback()
-//		c.JSON(http.StatusInternalServerError, gin.H{"message": "保存用户消息失败", "error": err.Error()})
-//		return
-//	}
-//
-//	// 更新主题最后消息时间
-//	if err := ai_service.UpdateOrCreateTheme(uid, req.Theme); err != nil {
-//		fmt.Printf("Failed to update theme: %v\n", err)
-//	}
-//
-//	// 使用博查API进行搜索
-//	searchReq := bocha.SearchRequest{
-//		Query:     req.Content,
-//		Freshness: "noLimit", // 使用默认时间范围
-//		Summary:   true,      // 获取完整摘要
-//		Count:     15,        // 获取15条结果
-//		Page:      1,
-//	}
-//
-//	// 使用封装的bochalient.BochaClient获取客户端并执行搜索
-//	searchResult, err := bochalient.BochaClient.GetClient().Search(searchReq)
-//	if err != nil {
-//		tx.Rollback()
-//		c.JSON(http.StatusInternalServerError, gin.H{
-//			"code":    500,
-//			"message": "搜索失败",
-//			"error":   err.Error(),
-//		})
-//		return
-//	}
-//
-//	// 解析搜索结果，提取有用信息
-//	searchInfo, err := bocha.ExtractSearchInfo(searchResult)
-//	if err != nil {
-//		fmt.Printf("解析搜索结果出错: %v，将使用原始结果\n", err)
-//		searchInfo = "搜索结果解析失败，但仍可能包含有用信息: " + searchResult
-//	}
-//
-//	// 构建带搜索信息的提示词
-//	prompt := fmt.Sprintf(`现在是%s，你是一位专业的AI助手，以下是用户的问题，以及我为你提供的最新网络搜索结果。
-//请根据这些搜索结果回答用户问题。注意以下几点：
-//1. 如果搜索结果提供了足够信息，请直接回答问题，并引用搜索结果中的相关信息
-//2. 如果搜索结果包含多个来源，请综合各个来源的信息进行回答
-//3. 如果搜索结果不足以回答问题，请诚实告知用户，并尽可能提供相关信息
-//4. 回答中应引用信息来源(例如网站名称)，以便用户验证
-//5. 保持客观、准确，不要添加搜索结果中没有的信息
-//
-//用户问题：%s
-//
-//网络搜索结果：
-//%s
-//
-//请基于上述搜索结果回答用户问题：`,
-//		time.Now().Format("2006年01月02日"),
-//		req.Content,
-//		searchInfo,
-//	)
-//
-//	// 将历史记录转换为DeepSeek可用的格式
-//	var messagesContent []string
-//	for _, history := range histories {
-//		rolePrefix := ""
-//		if history.Role == "user" {
-//			rolePrefix = "用户: "
-//		} else if history.Role == "assistant" {
-//			rolePrefix = "AI助手: "
-//		}
-//		messagesContent = append(messagesContent, rolePrefix+history.Content)
-//	}
-//
-//	// 用户消息加上搜索提示词，不显示给前端
-//	finalPrompt := ""
-//	if len(messagesContent) > 0 {
-//		finalPrompt = strings.Join(messagesContent, "\n") + "\n\n" + prompt
-//	} else {
-//		finalPrompt = prompt
-//	}
-//
-//	// 使用DeepSeek获取回复
-//	resp, code := deepseek.ChatWithDeepSeek(finalPrompt, "POST", req.Model)
-//
-//	if code != 200 {
-//		tx.Rollback()
-//		c.JSON(http.StatusBadRequest, gin.H{"message": "调用AI接口失败", "error": resp})
-//		return
-//	}
-//
-//	// 保存AI回复到历史记录
-//	aiMessage := ai_entity.ChatHistory{
-//		UserID:  uid,
-//		Model:   req.Model,
-//		Theme:   req.Theme,
-//		Role:    "assistant",
-//		Content: resp,
-//	}
-//
-//	if err := tx.Create(&aiMessage).Error; err != nil {
-//		tx.Rollback()
-//		c.JSON(http.StatusInternalServerError, gin.H{"message": "保存AI回复失败", "error": err.Error()})
-//		return
-//	}
-//
-//	if err := tx.Commit().Error; err != nil {
-//		c.JSON(http.StatusInternalServerError, gin.H{"message": "提交事务失败", "error": err.Error()})
-//		return
-//	}
-//
-//	// 更新历史记录列表
-//	histories = append(histories, userMessage, aiMessage)
-//
-//	// 更新缓存
-//	go func() {
-//		if err := ai_service.SaveChatCache(uid, req.Theme, histories); err != nil {
-//			fmt.Printf("Failed to save chat cache: %v\n", err)
-//		}
-//	}()
-//
-//	c.JSON(http.StatusOK, gin.H{
-//		"code":    200,
-//		"message": resp,
-//		"history": histories,
-//	})
-//}
+// BochaSearchRequest 博查搜索请求结构
+type BochaSearchRequest struct {
+	Query     string `json:"query"`
+	Freshness string `json:"freshness"`
+	Summary   bool   `json:"summary"`
+	Count     int    `json:"count"`
+	Page      int    `json:"page"`
+}
+
+// DeepSeek和博查API实现联网搜索
+func AiSearch(c *gin.Context) {
+	uid := libx.Uid(c)
+	var req ai_dto.ChatReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "参数错误",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 检查博查客户端是否已初始化
+	if bochalient.BochaClient == nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "联网搜索功能未配置，请设置BOCHA_API_KEY环境变量",
+		})
+		return
+	}
+
+	// 初始化Ristretto缓存
+	if err := ai_service.InitCache(); err != nil {
+		fmt.Printf("Failed to initialize cache: %v\n", err)
+	}
+
+	// 尝试从缓存加载历史记录
+	cache, err := ai_service.LoadChatCache(uid, req.Theme)
+	var histories []ai_entity.ChatHistory
+
+	if err != nil || !ai_service.IsCacheValid(cache, CacheExpiration) {
+		// 缓存不可用，从数据库加载
+		histories, err = ai_service.GetRecentChatHistoryByTheme(uid, req.Theme, DefaultContextMessageCount)
+		if err != nil {
+			fmt.Printf("Failed to get chat history: %v\n", err)
+			histories = []ai_entity.ChatHistory{}
+		}
+	} else {
+		// 使用缓存的消息
+		histories = cache.Messages
+	}
+
+	// 限制上下文消息数量
+	contextCount := DefaultContextMessageCount
+	if len(histories) > contextCount {
+		histories = histories[len(histories)-contextCount:]
+	}
+
+	// 保存当前用户消息到历史记录
+	userMessage := ai_entity.ChatHistory{
+		UserID:  uid,
+		Model:   req.Model,
+		Theme:   req.Theme,
+		Role:    "user",
+		Content: req.Content,
+	}
+
+	// 使用事务确保数据一致性
+	tx := dbs.DB.Begin()
+	if err := tx.Create(&userMessage).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "保存用户消息失败", "error": err.Error()})
+		return
+	}
+
+	// 更新主题最后消息时间
+	if err := ai_service.UpdateOrCreateTheme(uid, req.Theme); err != nil {
+		fmt.Printf("Failed to update theme: %v\n", err)
+	}
+
+	// 使用博查API进行搜索
+	searchReq := bocha.SearchRequest{
+		Query:     req.Content,
+		Freshness: "noLimit", // 使用默认时间范围
+		Summary:   true,      // 获取完整摘要
+		Count:     15,        // 获取15条结果
+		Page:      1,
+	}
+
+	// 使用封装的bochalient.BochaClient获取客户端并执行搜索
+	searchResult, err := bochalient.BochaClient.GetClient().Search(searchReq)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "搜索失败",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// 解析搜索结果，提取有用信息
+	searchInfo, err := bocha.ExtractSearchInfo(searchResult)
+	if err != nil {
+		fmt.Printf("解析搜索结果出错: %v，将使用原始结果\n", err)
+		searchInfo = "搜索结果解析失败，但仍可能包含有用信息: " + searchResult
+	}
+
+	// 构建带搜索信息的提示词
+	prompt := fmt.Sprintf(`现在是%s，你是一位专业的AI助手，以下是用户的问题，以及我为你提供的最新网络搜索结果。
+请根据这些搜索结果回答用户问题。注意以下几点：
+1. 如果搜索结果提供了足够信息，请直接回答问题，并引用搜索结果中的相关信息
+2. 如果搜索结果包含多个来源，请综合各个来源的信息进行回答
+3. 如果搜索结果不足以回答问题，请诚实告知用户，并尽可能提供相关信息
+4. 回答中应引用信息来源(例如网站名称)，以便用户验证
+5. 保持客观、准确，不要添加搜索结果中没有的信息
+
+用户问题：%s
+
+网络搜索结果：
+%s
+
+请基于上述搜索结果回答用户问题：`,
+		time.Now().Format("2006年01月02日"),
+		req.Content,
+		searchInfo,
+	)
+
+	// 将历史记录转换为DeepSeek可用的格式
+	var messagesContent []string
+	for _, history := range histories {
+		rolePrefix := ""
+		if history.Role == "user" {
+			rolePrefix = "用户: "
+		} else if history.Role == "assistant" {
+			rolePrefix = "AI助手: "
+		}
+		messagesContent = append(messagesContent, rolePrefix+history.Content)
+	}
+
+	// 用户消息加上搜索提示词，不显示给前端
+	finalPrompt := ""
+	if len(messagesContent) > 0 {
+		finalPrompt = strings.Join(messagesContent, "\n") + "\n\n" + prompt
+	} else {
+		finalPrompt = prompt
+	}
+
+	// 使用DeepSeek获取回复
+	resp, code := deepseek.ChatWithDeepSeek(finalPrompt, "POST", req.Model)
+
+	if code != 200 {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{"message": "调用AI接口失败", "error": resp})
+		return
+	}
+
+	// 保存AI回复到历史记录
+	aiMessage := ai_entity.ChatHistory{
+		UserID:  uid,
+		Model:   req.Model,
+		Theme:   req.Theme,
+		Role:    "assistant",
+		Content: resp,
+	}
+
+	if err := tx.Create(&aiMessage).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "保存AI回复失败", "error": err.Error()})
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "提交事务失败", "error": err.Error()})
+		return
+	}
+
+	// 更新历史记录列表
+	histories = append(histories, userMessage, aiMessage)
+
+	// 更新缓存
+	go func() {
+		if err := ai_service.SaveChatCache(uid, req.Theme, histories); err != nil {
+			fmt.Printf("Failed to save chat cache: %v\n", err)
+		}
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": resp,
+		"history": histories,
+	})
+}
