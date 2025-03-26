@@ -12,6 +12,7 @@ type GlobalConfig struct {
 	AccessKeyID     string `yaml:"AccessKeyID"`
 	AccessKeySecret string `yaml:"AccessKeySecret"`
 	DeepSeekKey     string `yaml:"DeepSeekKey"`
+  BOCHA_Apikey string `yaml:"BOCHA_Apikey"`
 	LogPath         string `yaml:"LogPath"`
 	Auth            struct {
 		Secret string `yaml:"Secret"`

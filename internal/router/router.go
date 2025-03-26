@@ -13,7 +13,6 @@ import (
 )
 
 func GenerateRouters(r *gin.Engine) *gin.Engine {
-	r.GET("/ping", ai_handler.PingMoonshot)
 	// 用户相关路由
 	userGroup := r.Group("/api/user")
 	{
@@ -30,6 +29,8 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		aiGroup.POST("/chat", ai_handler.ChatWithAi)
 		aiGroup.GET("/history", ai_handler.GetChatHistory)
 		aiGroup.GET("/theme", ai_handler.GetChatThemes)
+		aiGroup.DELETE("/delete", ai_handler.DeleteChatTheme)
+		aiGroup.GET("/search", ai_handler.AiSearch)
 		aiGroup.GET("/search", ai_handler.SearchWithMoonshot)
 		aiGroup.POST("/opinion/more", ai_handler.GenerateLegalOpinionBetter)
 	}

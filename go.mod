@@ -3,6 +3,7 @@ module Programming-Demo
 go 1.23.2
 
 require (
+	github.com/dgraph-io/ristretto v0.2.0
 	github.com/aliyun/alibaba-cloud-sdk-go v1.63.98
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.7.0
@@ -20,8 +21,10 @@ require (
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/cockroachdb/errors v1.9.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
