@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/northes/go-moonshot"
 	"io"
-	"log"
 	"time"
 )
 
@@ -74,7 +73,6 @@ func GetAIRespMore(query string) (string, int, []Document) {
 		prompt += "参考资料：\n" + doc.Content + "\n\n"
 	}
 	prompt += "问题：" + query
-	log.Println(prompt)
 
 	// 调用 AI 接口
 	resp, code := GetAIResp(prompt)
