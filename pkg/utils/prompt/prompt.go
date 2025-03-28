@@ -2,6 +2,7 @@ package prompt
 
 import (
 	"Programming-Demo/internal/app/ai/ai_dto"
+	"Programming-Demo/pkg/utils/ai"
 	"fmt"
 	"strconv"
 	"strings"
@@ -188,22 +189,28 @@ func BuildLegalAnalysisPrompt(content string) string {
 	return prompt
 }
 
-// buildRAGPrompt 构建RAG提示
-func buildRAGPrompt(query string, contexts []string, scores []float32) string {
+// BuildRAGPrompt 构建RAG提示
+func BuildRAGPrompt(query string) (string, []ai.Document) {
 	var sb strings.Builder
 
 	// 添加指令
 	sb.WriteString("请根据以下参考信息回答问题。如果参考信息不足以回答问题，请直接说明无法从参考信息中找到答案。\n\n")
 
+	// 检索相关文档
+	docs, err := ai.SearchSimilarDocumentsWithParam(query, 30)
+	if err != nil {
+		return "检索相关文档失败: " + err.Error(), docs
+	}
+
 	// 添加参考信息
 	sb.WriteString("参考信息:\n")
-	for i, ctx := range contexts {
-		sb.WriteString(fmt.Sprintf("[%d] 相关度:%.2f\n%s\n\n", i+1, scores[i], ctx))
+	for i, ctx := range docs {
+		sb.WriteString(fmt.Sprintf("[%d] 相关度:%.2f\n%s\n\n", i+1, ctx.Score, ctx.Content))
 	}
 
 	// 添加用户问题
 	sb.WriteString("问题: " + query + "\n\n")
 	sb.WriteString("请根据以上参考信息回答问题:")
 
-	return sb.String()
+	return sb.String(), docs
 }

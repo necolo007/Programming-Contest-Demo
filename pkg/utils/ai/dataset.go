@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/schollz/progressbar/v3"
-	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -67,7 +66,7 @@ func ImportCSVToMilvus(filepath string, batchSize int) error {
 		bar.Add(len(batch))
 
 		// 6. 添加延迟防止API限流
-		time.Sleep(1 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 
 	color.Green("成功导入 %d/%d 条记录到 Milvus", successCount, total)
@@ -83,7 +82,7 @@ func processBatchWithRetry(records [][]string, startID int64) error {
 		if attempt > 0 {
 			// 退避时间 = 2^尝试次数 * (800 + [0, 400)ms)重试抖动
 			backoff := time.Duration(math.Pow(2, float64(attempt))*float64(800+rand.Intn(400))) * time.Millisecond
-			color.Yellow("重试 %d/%d，等待 %v...", attempt+1, maxRetries, backoff)
+			color.Red("重试 %d/%d，等待 %v...", attempt+1, maxRetries, backoff)
 			time.Sleep(backoff)
 		}
 
@@ -95,7 +94,7 @@ func processBatchWithRetry(records [][]string, startID int64) error {
 		if strings.Contains(err.Error(), "Throttling.User") {
 			// 对于用户限流错误，使用更长的退避时间
 			backoff := time.Duration(math.Pow(2, float64(attempt+2))) * time.Second
-			color.Yellow("用户请求限流，等待较长时间: %v", backoff)
+			color.Red("用户请求限流，等待较长时间: %v", backoff)
 			time.Sleep(backoff)
 			continue
 		}
@@ -132,8 +131,7 @@ func processBatch(records [][]string, startID int64) error {
 	// 首先计算有效记录数
 	for i, record := range records {
 		if len(record) >= 2 {
-			log.Println(record)
-			contents = append(contents, fmt.Sprintf("问题：%s\n答案：%s", record[0], record[1]))
+			contents = append(contents, fmt.Sprintf("法条编章：%s法条内容：%s", record[0]+record[1]+record[2], record[3]+record[4]))
 			ids = append(ids, startID+int64(i))
 			validRecords++
 		}
@@ -152,7 +150,7 @@ func processBatch(records [][]string, startID int64) error {
 		// 只为问题生成向量
 		embedding, err := GenerateEmbedding(record[0])
 		if err != nil {
-			color.Yellow("向量生成失败，跳过此条：%v", err)
+			color.Red("向量生成失败，跳过此条：%v", err)
 			// 移除对应的content和id
 			if validIdx < len(contents) {
 				contents = append(contents[:validIdx], contents[validIdx+1:]...)
