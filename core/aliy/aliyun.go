@@ -32,7 +32,6 @@ func InitAliyun() {
 	)
 	if err != nil {
 		log.Println("初始化阿里云客户端失败")
-		log.Fatalln(err)
 	}
 }
 

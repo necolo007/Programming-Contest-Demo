@@ -59,24 +59,49 @@ func SearchSimilarDocuments(query string, topK int) ([]Document, error) {
 	return docs, nil
 }
 
-// GetAIRespMore 增强版本
-func GetAIRespMore(query string) (string, int, []Document) {
-	// 检索相关文档
-	docs, err := SearchSimilarDocuments(query, 3)
+// SearchSimilarDocumentsWithParam 搜索相似文档
+func SearchSimilarDocumentsWithParam(query string, topK int) ([]Document, error) {
+	// 生成查询的向量嵌入
+	embedding, err := GenerateEmbedding(query)
 	if err != nil {
-		return "检索相关文档失败: " + err.Error(), 500, []Document{}
+		return nil, fmt.Errorf("生成查询向量失败: %v", err)
 	}
 
-	// 构建提示词
-	prompt := "基于以下参考资料回答问题：\n\n"
-	for _, doc := range docs {
-		prompt += "参考资料：\n" + doc.Content + "\n\n"
+	// 将float64转换为float32
+	vector := make([]float32, len(embedding))
+	for i, v := range embedding {
+		vector[i] = float32(v)
 	}
-	prompt += "问题：" + query
 
-	// 调用 AI 接口
-	resp, code := GetAIResp(prompt)
-	return resp, code, docs
+	// 高级搜索参数
+	searchParams := map[string]interface{}{
+		"metric_type": "IP", // 使用内积可能对嵌入效果更好
+		"params": map[string]interface{}{
+			"nprobe": 50, // 大幅增加nprobe值提高召回率
+		},
+	}
+
+	// 搜索相似向量，��用增强版本的搜索函数
+	ids, scores, contents, err := milvus.SearchVectorsWithParams(vector, topK*2, searchParams)
+	if err != nil {
+		// 回退到基本搜索
+		ids, scores, contents, err = milvus.SearchVectors(vector, topK)
+		if err != nil {
+			return nil, fmt.Errorf("搜索相似向量失败: %v", err)
+		}
+	}
+
+	// 创建文档结果集
+	docs := make([]Document, len(ids))
+	for i := range ids {
+		docs[i] = Document{
+			ID:      ids[i],
+			Content: contents[i],
+			Score:   scores[i],
+		}
+	}
+
+	return docs, nil
 }
 
 func GetAIResp(m string) (string, int) {

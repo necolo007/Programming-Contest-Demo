@@ -31,7 +31,7 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		aiGroup.GET("/theme", ai_handler.GetChatThemes)
 		aiGroup.DELETE("/delete", ai_handler.DeleteChatTheme)
 		aiGroup.GET("/search", ai_handler.AiSearch)
-		aiGroup.POST("/opinion/more", ai_handler.GenerateLegalOpinionBetter)
+		aiGroup.POST("/doc/more", ai_handler.GenerateLegalDocBetter)
 	}
 	// 管理员相关路由
 	adminGroup := r.Group("/api/admin", web.JWTAuthMiddleware(), web.AdminAuthMiddleware())

@@ -4,6 +4,7 @@ import (
 	"Programming-Demo/core/aliy"
 	"encoding/json"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
+	"log"
 )
 
 // Response 定义响应结构体
@@ -30,7 +31,7 @@ func NplApi(s string) []float64 {
 	request.QueryParams["TokenizerId"] = "GENERAL_CHN"
 	response, err := aliy.AliyunClient.GetClient().ProcessCommonRequest(request)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	// 解析外层响应
 	var resp Response

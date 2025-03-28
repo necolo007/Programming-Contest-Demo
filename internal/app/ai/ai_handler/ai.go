@@ -659,8 +659,8 @@ func AiSearch(c *gin.Context) {
 	})
 }
 
-func GenerateLegalOpinionBetter(c *gin.Context) {
-	var req ai_dto.GenerateLegalOpinionReq
+func GenerateLegalDocBetter(c *gin.Context) {
+	var req ai_dto.GenerateLegalDocReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
@@ -669,11 +669,23 @@ func GenerateLegalOpinionBetter(c *gin.Context) {
 		})
 		return
 	}
-	p := prompt.BuildLegalOpinionPrompt(req)
-	resp, code, docs := ai.GetAIRespMore(p)
-	if code != 200 {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "调用ai接口失败", "error": resp})
+	var Resp string
+	var code int
+	p := prompt.BuildLegalDocPrompt(req)
+	ps, docs := prompt.BuildRAGPrompt(p)
+	// 选择不同的 AI 模型处理
+	switch req.Model {
+	case "moonshot":
+		Resp, code = ai.GetAIResp(ps)
+	case "deepseek-chat", "deepseek-reasoner":
+		Resp, code = deepseek.ChatWithDeepSeek(ps, "POST", req.Model)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"message": "模型错误"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"code": code, "message": resp, "docs": docs})
+	if code != 200 {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "调用ai接口失败", "error": Resp})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"code": code, "doc": docs, "message": Resp})
 }

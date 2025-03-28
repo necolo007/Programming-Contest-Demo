@@ -100,10 +100,10 @@ func Run() {
 		}
 
 		// 更小的批量大小，便于更好地管理
-		batchSize := 5
+		batchSize := 4
 
 		// 使用带速率限制的优化导入函数
-		err := ai.ImportCSVToMilvus("40000条法律问答数据集.csv", batchSize)
+		err := ai.ImportCSVToMilvus("民法典.csv", batchSize)
 		if err != nil {
 			color.Red("导入数据集错误: %s", err.Error())
 			return

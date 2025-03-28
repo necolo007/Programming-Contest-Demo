@@ -94,7 +94,7 @@ func InsertVectors(vectors [][]float32, contents []string) error {
 	// 只创建集合中定义的两个字段
 	contentColumn := entity.NewColumnVarChar("content", contents)
 	dim := config.GetConfig().Milvus.Dim
-	log.Println("dim:", dim)
+
 	vectorColumn := entity.NewColumnFloatVector("vector", dim, vectors)
 
 	// 只传递两个字段
@@ -168,6 +168,81 @@ func SearchVectors(vector []float32, topK int) ([]int64, []float32, []string, er
 		}
 
 		// 提取content
+		for _, field := range result.Fields {
+			if contentCol, ok := field.(*entity.ColumnVarChar); ok {
+				contents = append(contents, contentCol.Data()...)
+			}
+		}
+	}
+
+	return ids, scores, contents, nil
+}
+
+// SearchVectorsWithParams 添加高级搜索参数的向量搜索
+func SearchVectorsWithParams(vector []float32, topK int, params map[string]interface{}) ([]int64, []float32, []string, error) {
+	ctx := context.Background()
+	if err := LoadCollection(ctx); err != nil {
+		return nil, nil, nil, fmt.Errorf("加载集合失败: %v", err)
+	}
+	collName := config.GetConfig().Milvus.Collection
+
+	// 提取搜索参数
+	metricType := entity.L2
+	if mt, ok := params["metric_type"].(string); ok && mt == "IP" {
+		metricType = entity.IP // 使用内积距离可能对某些嵌入效果更好
+	}
+
+	// 创建高级搜索参数
+	nprobe := 50 // 默认值更高
+	if np, ok := params["params"].(map[string]interface{})["nprobe"].(int); ok {
+		nprobe = np
+	}
+
+	sp, err := entity.NewIndexIvfFlatSearchParam(nprobe)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("创建搜索参数失败: %v", err)
+	}
+
+	// 创建搜索向量
+	searchVector := entity.FloatVector(vector)
+	searchVectors := []entity.Vector{searchVector}
+
+	// 执行搜索
+	results, err := MilvusClient.GetClient().Search(
+		ctx,
+		collName,
+		[]string{},
+		"",
+		[]string{"content", "vector"},
+		searchVectors,
+		"vector",
+		metricType,
+		topK,
+		sp,
+	)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("搜索向量失败: %v", err)
+	}
+
+	// 处理结果与原函数相同
+	if len(results) == 0 {
+		return nil, nil, nil, fmt.Errorf("未找到匹配结果")
+	}
+
+	ids := make([]int64, 0, topK)
+	scores := make([]float32, 0, topK)
+	contents := make([]string, 0, topK)
+
+	for _, result := range results {
+		if result.IDs != nil {
+			idCol, ok := result.IDs.(*entity.ColumnInt64)
+			if !ok {
+				return nil, nil, nil, fmt.Errorf("无效的ID类型")
+			}
+			ids = append(ids, idCol.Data()...)
+			scores = append(scores, result.Scores...)
+		}
+
 		for _, field := range result.Fields {
 			if contentCol, ok := field.(*entity.ColumnVarChar); ok {
 				contents = append(contents, contentCol.Data()...)
