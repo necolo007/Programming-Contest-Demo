@@ -48,11 +48,10 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		// 文件搜索相关路由
 		searchGroup := fileGroup.Group("/search")
 		{
-			searchGroup.POST("/keyword", search_handler.KeywordSearch)             // 关键词搜索（支持精确和模糊搜索）
-			searchGroup.POST("/advanced", search_handler.AdvancedSearch)           // 高级搜索
-			searchGroup.POST("/semantic", search_handler.SemanticSearch)           // 语义搜索
-			searchGroup.GET("/type", search_handler.SearchFileByTypeHandler)       // 按文件类型搜索
-			searchGroup.GET("/content", search_handler.SearchFileByContentHandler) // 按文件内容搜索
+			searchGroup.POST("/keyword", search_handler.KeywordSearch)       // 关键词搜索（支持精确和模糊搜索）
+			searchGroup.POST("/advanced", search_handler.AdvancedSearch)     // 高级搜索
+			searchGroup.POST("/semantic", search_handler.SemanticSearch)     // 语义搜索
+			searchGroup.GET("/type", search_handler.SearchFileByTypeHandler) // 按文件类型搜索
 		}
 		templateGroup := r.Group("/api/template", web.JWTAuthMiddleware())
 		{
