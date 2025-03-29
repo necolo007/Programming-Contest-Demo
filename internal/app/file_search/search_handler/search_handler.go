@@ -111,8 +111,17 @@ func AdvancedSearch(c *gin.Context) {
 	query := dbs.DB.Model(&file_entity.File{})
 
 	// 添加查询条件
-	if req.FileType != "" {
-		query = query.Where("type = ?", req.FileType)
+	if req.Category != "" {
+		query = query.Where("file_type = ?", req.Category)
+	}
+	if req.Filename != "" {
+		query = query.Where("filename LIKE ?", "%"+req.Filename+"%")
+	}
+	if req.Content != "" {
+		query = query.Where("content LIKE ?", "%"+req.Content+"%")
+	}
+	if req.Author != "" {
+		query = query.Where("author = ?", req.Author)
 	}
 	if !req.StartDate.IsZero() {
 		query = query.Where("created_at >= ?", req.StartDate)
@@ -121,15 +130,11 @@ func AdvancedSearch(c *gin.Context) {
 		query = query.Where("created_at <= ?", req.EndDate)
 	}
 	for _, keyword := range req.Keywords {
+		if strings.TrimSpace(keyword) == "" {
+			continue // 跳过空关键词
+		}
 		query = query.Where("content LIKE ?", "%"+keyword+"%")
 	}
-	for _, party := range req.Parties {
-		query = query.Where("parties LIKE ?", "%"+party+"%")
-	}
-	if req.CustomQuery != "" {
-		query = query.Where("content LIKE ?", "%"+req.CustomQuery+"%")
-	}
-
 	var files []file_entity.File
 	var total int64
 
@@ -257,7 +262,7 @@ func calculateRelevance(file file_entity.File) float64 {
 
 	sizeScore := math.Min(float64(len(file.Content))/1000.0, 1.0)
 
-	typeWeight := getFileTypeWeight(file.FileType) // 使用 FileType 字段
+	typeWeight := getFileTypeWeight(file.Category)
 
 	score = (timeScore*0.3 + sizeScore*0.3 + typeWeight*0.4) * 5
 
@@ -391,7 +396,7 @@ func SearchFileByContentHandler(c *gin.Context) {
 	// 过滤掉不支持内容搜索的文件类型
 	var supportedFiles []file_entity.File
 	for _, file := range files {
-		if isSupportedForContentSearch(file.FileType) {
+		if isSupportedForContentSearch(file.Category) {
 			supportedFiles = append(supportedFiles, file)
 		}
 	}
