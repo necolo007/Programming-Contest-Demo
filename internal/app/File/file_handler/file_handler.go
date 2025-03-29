@@ -111,10 +111,9 @@ func UploadFileHandler(c *gin.Context) {
 		MIMEType: contentType,
 		Category: req.Category,
 		Hash:     hash,
-		FileType: req.Category, // 添加 FileType
-		Status:   1,            // 设置状态为正常
-		Author:   "",           // 可以从用户信息中获取
-		Content:  "",           // 如果需要存储文件内容，可以在这里读取文件内容
+		Status:   1,  // 设置状态为正常
+		Author:   "", // 可以从用户信息中获取
+		Content:  "", // 如果需要存储文件内容，可以在这里读取文件内容
 	}
 
 	if err := dbs.DB.Create(&newFile).Error; err != nil {

@@ -13,7 +13,6 @@ type File struct {
 	Content  string `gorm:"column:content;type:text" json:"content"`                    // 文件内容
 	Author   string `gorm:"column:author;type:varchar(50)" json:"author"`               // 作者
 	Status   int    `gorm:"column:status;type:int;default:1" json:"status"`             // 状态(1:正常 0:删除)
-	FileType string `gorm:"column:file_type;type:varchar(20)" json:"file_type"`         // 文件类型
 	UserID   uint   `gorm:"column:user_id;not null" json:"user_id"`                     // 用户ID
 	Size     int64  `gorm:"column:size" json:"size"`                                    // 文件大小
 	MIMEType string `gorm:"column:mime_type;type:varchar(100)" json:"mime_type"`        // MIME类型

@@ -12,12 +12,13 @@ type KeywordSearchRequest struct {
 
 // AdvancedSearchRequest 高级搜索请求
 type AdvancedSearchRequest struct {
-	Keywords    []string  `json:"keywords"`     // 关键词列表
-	FileType    string    `json:"file_type"`    // 文件类型
-	StartDate   time.Time `json:"start_date"`   // 开始日期
-	EndDate     time.Time `json:"end_date"`     // 结束日期
-	Parties     []string  `json:"parties"`      // 相关方
-	CustomQuery string    `json:"custom_query"` // 自定义查询条件
+	Category  string    `json:"category"`   // 文件分类
+	Filename  string    `json:"filename"`   // 文件名
+	Content   string    `json:"content"`    // 文件内容
+	Author    string    `json:"author"`     // 作者
+	Keywords  []string  `json:"keywords"`   // 关键词列表
+	StartDate time.Time `json:"start_date"` // 开始日期
+	EndDate   time.Time `json:"end_date"`   // 结束日期
 }
 
 // SemanticSearchRequest 语义搜索请求
