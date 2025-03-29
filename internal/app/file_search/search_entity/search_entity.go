@@ -16,6 +16,7 @@ type SearchIndex struct {
 	Parties     string    `gorm:"type:text"`           // 相关方信息
 	Description string    `gorm:"type:text"`           // 文件描述
 	IndexStatus string    `gorm:"size:20;default:new"` // 索引状态
+	Public      int       `gorm:"default:0"`           // 文件公开状态
 }
 
 // SearchLog 搜索日志实体

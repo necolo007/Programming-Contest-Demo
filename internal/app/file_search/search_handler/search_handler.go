@@ -6,7 +6,6 @@ import (
 	"Programming-Demo/internal/app/file_search/search_dto"
 	"Programming-Demo/pkg/utils/ai"
 	"fmt"
-	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -58,9 +57,9 @@ func KeywordSearch(c *gin.Context) {
 		}
 	} else {
 		// 执行普通关键词搜索
-		query := dbs.DB.Model(&file_entity.File{}).
-			Where("content LIKE ? OR filename LIKE ?",
-				"%"+req.Keyword+"%", "%"+req.Keyword+"%")
+		query := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).
+			Where("audit_status = ?", "approved").
+			Where("filename LIKE ?", "%"+req.Keyword+"%")
 
 		var files []file_entity.File
 		var total int64
@@ -108,7 +107,8 @@ func AdvancedSearch(c *gin.Context) {
 		return
 	}
 
-	query := dbs.DB.Model(&file_entity.File{})
+	query := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).
+		Where("audit_status = ?", "approved")
 
 	// 添加查询条件
 	if req.Category != "" {
@@ -116,12 +116,6 @@ func AdvancedSearch(c *gin.Context) {
 	}
 	if req.Filename != "" {
 		query = query.Where("filename LIKE ?", "%"+req.Filename+"%")
-	}
-	if req.Content != "" {
-		query = query.Where("content LIKE ?", "%"+req.Content+"%")
-	}
-	if req.Author != "" {
-		query = query.Where("author = ?", req.Author)
 	}
 	if !req.StartDate.IsZero() {
 		query = query.Where("created_at >= ?", req.StartDate)
@@ -131,9 +125,9 @@ func AdvancedSearch(c *gin.Context) {
 	}
 	for _, keyword := range req.Keywords {
 		if strings.TrimSpace(keyword) == "" {
-			continue // 跳过空关键词
+			continue
 		}
-		query = query.Where("content LIKE ?", "%"+keyword+"%")
+		query = query.Where("filename LIKE ?", "%"+keyword+"%")
 	}
 	var files []file_entity.File
 	var total int64
@@ -193,8 +187,9 @@ func SemanticSearch(c *gin.Context) {
 	}
 
 	// 使用 AI 分析结果构建查询
-	query := dbs.DB.Model(&file_entity.File{}).
-		Where("content LIKE ?", "%"+aiResp+"%")
+	query := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).
+		Where("audit_status = ?", "approved").
+		Where("Filename LIKE ?", "%")
 
 	var files []file_entity.File
 	var total int64
@@ -233,110 +228,18 @@ func SemanticSearch(c *gin.Context) {
 func convertToDocumentResults(files []file_entity.File) []search_dto.DocumentResult {
 	results := make([]search_dto.DocumentResult, 0, len(files))
 	for _, file := range files {
-		relevance := calculateRelevance(file)
-		highlights := extractHighlights(file.Content)
 
 		results = append(results, search_dto.DocumentResult{
-			ID:          file.ID,
-			Title:       file.Filename,
-			Type:        file.Category,
-			CreateTime:  file.CreatedAt,
-			UpdateTime:  file.UpdatedAt,
-			FilePath:    file.Filepath,
-			Description: file.Content,
-			Highlights:  highlights,
-			Relevance:   relevance,
-			Author:      file.Author,
-			Status:      file.Status,
+			ID:         file.ID,
+			Title:      file.Filename,
+			Type:       file.Category,
+			CreateTime: file.CreatedAt,
+			UpdateTime: file.UpdatedAt,
+			FilePath:   file.Filepath,
+			Status:     file.Status,
 		})
 	}
 	return results
-}
-
-// 计算文档相关度
-func calculateRelevance(file file_entity.File) float64 {
-	var score float64 = 1.0
-
-	timeDiff := time.Since(file.UpdatedAt)
-	timeScore := 1.0 / (1.0 + float64(timeDiff.Hours())/24.0)
-
-	sizeScore := math.Min(float64(len(file.Content))/1000.0, 1.0)
-
-	typeWeight := getFileTypeWeight(file.Category)
-
-	score = (timeScore*0.3 + sizeScore*0.3 + typeWeight*0.4) * 5
-
-	return score
-}
-
-// 提取文档高亮片段
-func extractHighlights(content string) []string {
-	// 提取文档中的关键段落作为高亮显示
-	highlights := make([]string, 0)
-
-	// 简单实现：按段落分割，选择前几个非空段落
-	paragraphs := strings.Split(content, "\n\n")
-	for _, p := range paragraphs {
-		if len(p) > 0 && len(highlights) < 3 {
-			// 清理段落文本
-			p = strings.TrimSpace(p)
-			if len(p) > 200 {
-				p = p[:200] + "..."
-			}
-			highlights = append(highlights, p)
-		}
-	}
-
-	return highlights
-}
-
-// 获取文件类型权重
-func getFileTypeWeight(fileType string) float64 {
-	weights := map[string]float64{
-		"doc":  0.8,
-		"docx": 0.8,
-		"pdf":  0.9,
-		"txt":  0.6,
-		// 可以添加更多文件类型的权重
-	}
-
-	if weight, ok := weights[fileType]; ok {
-		return weight
-	}
-	return 0.5 // 默认权重
-}
-
-// SearchFileByKeywordHandler 按关键词搜索文件
-func SearchFileByKeywordHandler(c *gin.Context) {
-	keyword := c.Query("keyword")
-	if keyword == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "搜索关键词不能为空",
-		})
-		return
-	}
-
-	var files []file_entity.File
-	if err := dbs.DB.Where("filename LIKE ?", "%"+keyword+"%").Find(&files).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "搜索文件失败",
-			"error":   err.Error(),
-		})
-		return
-	}
-
-	results := &search_dto.SearchResponse{
-		Documents: convertToDocumentResults(files),
-		Total:     len(files),
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "搜索成功",
-		"data":    results,
-	})
 }
 
 // SearchFileByTypeHandler 按文件类型搜索文件
@@ -351,7 +254,9 @@ func SearchFileByTypeHandler(c *gin.Context) {
 	}
 
 	var files []file_entity.File
-	if err := dbs.DB.Where("file_type = ?", fileType).Find(&files).Error; err != nil {
+	if err := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).
+		Where("audit_status = ?", "approved").
+		Where("file_type = ?", fileType).Find(&files).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
 			"message": "搜索文件失败",
@@ -370,57 +275,4 @@ func SearchFileByTypeHandler(c *gin.Context) {
 		"message": "搜索成功",
 		"data":    results,
 	})
-}
-
-// SearchFileByContentHandler 按文件内容搜索文件
-func SearchFileByContentHandler(c *gin.Context) {
-	content := c.Query("content")
-	if content == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "搜索内容不能为空",
-		})
-		return
-	}
-
-	var files []file_entity.File
-	if err := dbs.DB.Where("content LIKE ?", "%"+content+"%").Find(&files).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "搜索文件失败",
-			"error":   err.Error(),
-		})
-		return
-	}
-
-	// 过滤掉不支持内容搜索的文件类型
-	var supportedFiles []file_entity.File
-	for _, file := range files {
-		if isSupportedForContentSearch(file.Category) {
-			supportedFiles = append(supportedFiles, file)
-		}
-	}
-
-	results := &search_dto.SearchResponse{
-		Documents: convertToDocumentResults(supportedFiles),
-		Total:     len(supportedFiles),
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "搜索成功",
-		"data":    results,
-	})
-}
-
-// isSupportedForContentSearch 判断文件类型是否支持内容搜索
-func isSupportedForContentSearch(fileType string) bool {
-	supportedTypes := []string{"txt", "doc", "docx", "pdf"}
-	fileType = strings.ToLower(fileType)
-	for _, t := range supportedTypes {
-		if fileType == t {
-			return true
-		}
-	}
-	return false
 }
