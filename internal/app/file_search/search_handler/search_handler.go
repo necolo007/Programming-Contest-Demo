@@ -58,6 +58,7 @@ func KeywordSearch(c *gin.Context) {
 	} else {
 		// 执行普通关键词搜索
 		query := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).
+			Where("audit_status = ?", "approved").
 			Where("filename LIKE ?", "%"+req.Keyword+"%")
 
 		var files []file_entity.File
@@ -106,7 +107,8 @@ func AdvancedSearch(c *gin.Context) {
 		return
 	}
 
-	query := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1)
+	query := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).
+		Where("audit_status = ?", "approved")
 
 	// 添加查询条件
 	if req.Category != "" {
@@ -186,6 +188,7 @@ func SemanticSearch(c *gin.Context) {
 
 	// 使用 AI 分析结果构建查询
 	query := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).
+		Where("audit_status = ?", "approved").
 		Where("Filename LIKE ?", "%")
 
 	var files []file_entity.File
@@ -239,76 +242,6 @@ func convertToDocumentResults(files []file_entity.File) []search_dto.DocumentRes
 	return results
 }
 
-// 提取文档高亮片段
-//func extractHighlights(content string) []string {
-// 提取文档中的关键段落作为高亮显示
-//highlights := make([]string, 0)
-
-// 简单实现：按段落分割，选择前几个非空段落
-//paragraphs := strings.Split(content, "\n\n")
-//for _, p := range paragraphs {
-//if len(p) > 0 && len(highlights) < 3 {
-// 清理段落文本
-//p = strings.TrimSpace(p)
-//if len(p) > 200 {
-//p = p[:200] + "..."
-//}
-//highlights = append(highlights, p)
-//}
-//}
-
-//return highlights
-//}
-
-// 获取文件类型权重
-//func getFileTypeWeight(fileType string) float64 {
-//weights := map[string]float64{
-//"doc":  0.8,
-//"docx": 0.8,
-//"pdf":  0.9,
-//"txt":  0.6,
-// 可以添加更多文件类型的权重
-//}
-
-//if weight, ok := weights[fileType]; ok {
-//return weight
-//}
-//return 0.5 // 默认权重
-//}
-
-// SearchFileByKeywordHandler 按关键词搜索文件
-//func SearchFileByKeywordHandler(c *gin.Context) {
-//keyword := c.Query("keyword")
-//if keyword == "" {
-//c.JSON(http.StatusBadRequest, gin.H{
-//"code":    400,
-//"message": "搜索关键词不能为空",
-//})
-//return
-//}
-
-//var files []file_entity.File
-//if err := dbs.DB.Where("filename LIKE ?", "%"+keyword+"%").Find(&files).Error; err != nil {
-//c.JSON(http.StatusInternalServerError, gin.H{
-//"code":    500,
-//"message": "搜索文件失败",
-//"error":   err.Error(),
-//})
-//return
-//}
-
-//results := &search_dto.SearchResponse{
-//Documents: convertToDocumentResults(files),
-//Total:     len(files),
-//}
-
-//c.JSON(http.StatusOK, gin.H{
-//"code":    200,
-//"message": "搜索成功",
-//"data":    results,
-//})
-//}
-
 // SearchFileByTypeHandler 按文件类型搜索文件
 func SearchFileByTypeHandler(c *gin.Context) {
 	fileType := c.Query("type")
@@ -321,7 +254,9 @@ func SearchFileByTypeHandler(c *gin.Context) {
 	}
 
 	var files []file_entity.File
-	if err := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).Where("file_type = ?", fileType).Find(&files).Error; err != nil {
+	if err := dbs.DB.Model(&file_entity.File{}).Where("Public = ?", 1).
+		Where("audit_status = ?", "approved").
+		Where("file_type = ?", fileType).Find(&files).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"code":    500,
 			"message": "搜索文件失败",

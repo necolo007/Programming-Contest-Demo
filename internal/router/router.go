@@ -39,6 +39,9 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		// 这里可以添加需要管理员权限的路由
 		// 管理员可以获取所有用户信息
 		adminGroup.GET("/users", user_handler.GetAllUsers)
+		adminGroup.POST("/audit/:id", file_handler.AuditFile)
+		adminGroup.POST("/audit", file_handler.ListPendingFiles)
+		adminGroup.GET("/audit/:id/get", file_handler.GetPendingFileHandler)
 	}
 	fileGroup := r.Group("/api/file", web.JWTAuthMiddleware())
 	{
