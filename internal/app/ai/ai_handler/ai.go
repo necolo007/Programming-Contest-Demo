@@ -454,27 +454,6 @@ func GenerateComplaint(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"code": code, "message": Resp})
 }
 
-// BoTool 博查AI搜索工具定义
-type BoTool struct {
-	Type     string `json:"type"`
-	Function BoDef  `json:"function"`
-}
-
-// BoDef 博查AI搜索函数定义
-type BoDef struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-}
-
-// BochaSearchRequest 博查搜索请求结构
-type BochaSearchRequest struct {
-	Query     string `json:"query"`
-	Freshness string `json:"freshness"`
-	Summary   bool   `json:"summary"`
-	Count     int    `json:"count"`
-	Page      int    `json:"page"`
-}
-
 // DeepSeek和博查API实现联网搜索
 func AiSearch(c *gin.Context) {
 	uid := libx.Uid(c)

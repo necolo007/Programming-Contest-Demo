@@ -136,40 +136,6 @@ func IsCacheValid(cache *ai_entity.LocalChatCache, maxAge time.Duration) bool {
 	return time.Since(cache.LastUpdated) <= maxAge
 }
 
-// 更新主题的最后消息时间
-func RefreshThemeLastMessage(userID uint, theme string) error {
-	now := time.Now()
-
-	// 更新主题的最后消息时间和更新时间
-	result := dbs.DB.Model(&ai_entity.ChatTheme{}).
-		Where("user_id = ? AND theme = ?", userID, theme).
-		Updates(map[string]interface{}{
-			"last_message": now,
-			"updated_at":   now,
-		})
-
-	if result.Error != nil {
-		return fmt.Errorf("failed to refresh theme last message: %w", result.Error)
-	}
-
-	// 如果没有更新任何记录，说明主题不存在，需要创建
-	if result.RowsAffected == 0 {
-		newTheme := ai_entity.ChatTheme{
-			UserID:      userID,
-			Theme:       theme,
-			LastMessage: now,
-			CreatedAt:   now,
-			UpdatedAt:   now,
-		}
-
-		if err := dbs.DB.Create(&newTheme).Error; err != nil {
-			return fmt.Errorf("failed to create new theme: %w", err)
-		}
-	}
-
-	return nil
-}
-
 // 获取指定主题的最近聊天记录
 func GetRecentChatHistoryByTheme(userID uint, theme string, limit int) ([]ai_entity.ChatHistory, error) {
 	if limit <= 0 {
@@ -249,32 +215,4 @@ func GetAllChatThemes(userID uint) ([]ai_entity.ChatTheme, error) {
 	}
 
 	return themes, nil
-}
-
-// 删除指定用户的指定主题的所有聊天历史记录
-func DeleteChatHistoryByTheme(userID uint, theme string) error {
-	// 使用事务确保数据一致性
-	tx := dbs.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 删除聊天历史记录
-	if err := tx.Where("user_id = ? AND theme = ?", userID, theme).
-		Delete(&ai_entity.ChatHistory{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to delete chat history: %w", err)
-	}
-
-	// 删除主题记录
-	if err := tx.Where("user_id = ? AND theme = ?", userID, theme).
-		Delete(&ai_entity.ChatTheme{}).Error; err != nil {
-		tx.Rollback()
-		return fmt.Errorf("failed to delete chat theme: %w", err)
-	}
-
-	// 提交事务
-	return tx.Commit().Error
 }
