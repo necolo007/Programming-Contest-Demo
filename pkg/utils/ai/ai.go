@@ -73,7 +73,7 @@ func SearchSimilarDocumentsWithParam(query string, topK int) ([]Document, error)
 		vector[i] = float32(v)
 	}
 
-	// 高级搜索参数
+	//高级搜索参数
 	searchParams := map[string]interface{}{
 		"metric_type": "IP", // 使用内积可能对嵌入效果更好
 		"params": map[string]interface{}{
