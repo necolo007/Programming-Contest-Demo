@@ -86,7 +86,6 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		{
 			storyGroup.POST("/create", story_handler.CreateStory)
 			storyGroup.GET("/get", story_handler.GetRandomStory)
-
 		}
 		return r
 	}

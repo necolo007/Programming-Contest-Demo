@@ -197,7 +197,7 @@ func BuildRAGPrompt(query string) (string, []ai.Document) {
 	sb.WriteString("请根据以下参考信息回答问题。如果参考信息不足以回答问题，请直接说明无法从参考信息中找到答案。\n\n")
 
 	// 检索相关文档
-	docs, err := ai.SearchSimilarDocumentsWithParam(query, 30)
+	docs, err := ai.SearchSimilarDocumentsWithParam(query, 10)
 	if err != nil {
 		return "检索相关文档失败: " + err.Error(), docs
 	}

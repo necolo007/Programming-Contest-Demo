@@ -139,7 +139,7 @@ func SearchVectors(vector []float32, topK int) ([]int64, []float32, []string, er
 		[]string{"content", "vector"}, // 输出字段
 		searchVectors,                 // 搜索向量
 		"vector",                      // 向量字段名称
-		entity.L2,                     // 度量类型
+		entity.COSINE,                 // 度量类型
 		int(int64(topK)),              // 搜索结果数量
 		sp,                            // 搜索参数
 	)
@@ -187,7 +187,7 @@ func SearchVectorsWithParams(vector []float32, topK int, params map[string]inter
 	collName := config.GetConfig().Milvus.Collection
 
 	// 提取搜索参数
-	metricType := entity.L2
+	metricType := entity.COSINE
 	if mt, ok := params["metric_type"].(string); ok && mt == "IP" {
 		metricType = entity.IP // 使用内积距离可能对某些嵌入效果更好
 	}
@@ -335,7 +335,7 @@ func CreateVectorIndex(ctx context.Context) error {
 	}
 
 	// 创建索引参数
-	idx, err := entity.NewIndexIvfFlat(entity.L2, 1024) // nlist=1024
+	idx, err := entity.NewIndexIvfFlat(entity.COSINE, 1024) // nlist=1024
 	if err != nil {
 		return fmt.Errorf("创建索引参数失败: %v", err)
 	}
