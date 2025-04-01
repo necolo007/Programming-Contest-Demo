@@ -39,6 +39,9 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		// 这里可以添加需要管理员权限的路由
 		// 管理员可以获取所有用户信息
 		adminGroup.GET("/users", user_handler.GetAllUsers)
+		adminGroup.POST("/audit/:id", file_handler.AuditFile)
+		adminGroup.POST("/audit", file_handler.ListPendingFiles)
+		adminGroup.GET("/audit/:id/get", file_handler.GetPendingFileHandler)
 	}
 	fileGroup := r.Group("/api/file", web.JWTAuthMiddleware())
 	{
@@ -55,7 +58,29 @@ func GenerateRouters(r *gin.Engine) *gin.Engine {
 		}
 		templateGroup := r.Group("/api/template", web.JWTAuthMiddleware())
 		{
+			// 获取顶级分类(不包含子分类)
+			templateGroup.GET("/top-categories", template_handler.GetTopLevelCategoriesHandler)
+
+			// 获取所有模板分类(完整树)
+			templateGroup.GET("/categories", template_handler.GetTemplateCategoriesHandler)
+
+			// 获取特定分类下的子分类
+			templateGroup.GET("/categories/:categoryId/subcategories", template_handler.GetTemplateSubCategoriesHandler)
+
+			// 获取特定子分类下的文档类型
+			templateGroup.GET("/categories/:categoryId/subcategories/:subCategoryId/doctypes", template_handler.GetTemplateDocTypesHandler)
+
+			// 创建模板(管理员权限)
 			templateGroup.POST("/upload", web.AdminAuthMiddleware(), template_handler.CreateTemplateHandler)
+
+			// 根据分类获取模板列表
+			templateGroup.GET("/categories/:categoryId", template_handler.GetTemplatesByCategoryHandler)
+
+			// 获取模板详情
+			templateGroup.GET("/:id", template_handler.GetTemplateDetailHandler)
+
+			// 初始化系统模板(管理员权限)
+			templateGroup.POST("/initialize", web.AdminAuthMiddleware(), template_handler.InitializeTemplatesHandler)
 		}
 		storyGroup := r.Group("/api/story", web.JWTAuthMiddleware())
 		{
