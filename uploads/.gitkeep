@@ -1,0 +1,4 @@
+# 忽略uploads目录中的所有文件
+/uploads/*
+# 但保留.gitkeep文件，这样空目录结构会被保留
+!/uploads/.gitkeep
