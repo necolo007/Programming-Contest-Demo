@@ -164,6 +164,7 @@ func ChatWithAi(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    code,
+		"theme":   req.Theme,
 		"message": Resp,
 	})
 }
@@ -478,6 +479,18 @@ func AiSearch(c *gin.Context) {
 		return
 	}
 
+	// 如果主题为空，则生成主题名称
+	if req.Theme == "" {
+		themeName, err := GenerateThemeName(req.Content, req.Model)
+		if err != nil {
+			// 如果生成失败，使用默认主题名称
+			req.Theme = "联网搜索_" + time.Now().Format("20060102150405")
+			fmt.Printf("Failed to generate theme name for user %v: %v, using default\n", uid, err)
+		} else {
+			req.Theme = themeName
+		}
+	}
+
 	// 初始化Ristretto缓存
 	if err := ai_service.InitCache(); err != nil {
 		fmt.Printf("Failed to initialize cache: %v\n", err)
@@ -530,7 +543,7 @@ func AiSearch(c *gin.Context) {
 	// 使用博查API进行搜索
 	searchReq := bocha.SearchRequest{
 		Query:     req.Content,
-		Freshness: "noLimit", // 使用默认时间范围
+		Freshness: "noLimit", // a.使用默认时间范围
 		Summary:   true,      // 获取完整摘要
 		Count:     15,        // 获取15条结果
 		Page:      1,
@@ -634,9 +647,11 @@ func AiSearch(c *gin.Context) {
 		}
 	}()
 
+	// 返回响应，包含主题名称
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": resp,
+		"theme":   req.Theme, // 添加主题到响应中
 	})
 }
 
