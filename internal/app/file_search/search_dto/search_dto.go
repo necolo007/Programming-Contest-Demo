@@ -10,13 +10,12 @@ type KeywordSearchRequest struct {
 	Keyword string `json:"keyword"` // 关键词
 }
 
-// AdvancedSearchRequest 高级搜索请求
 type AdvancedSearchRequest struct {
-	Category  string    `json:"category"`   // 文件分类
-	Filename  string    `json:"filename"`   // 文件名
-	Keywords  []string  `json:"keywords"`   // 关键词列表
-	StartDate time.Time `json:"start_date"` // 开始日期
-	EndDate   time.Time `json:"end_date"`   // 结束日期
+	Category  string    `json:"category"`
+	Filename  string    `json:"filename"`
+	Keywords  []string  `json:"keywords"`
+	StartDate time.Time `json:"start_date"` // 修改标签为客户端传递的字段名
+	EndDate   time.Time `json:"end_date"`
 }
 
 // SemanticSearchRequest 语义搜索请求

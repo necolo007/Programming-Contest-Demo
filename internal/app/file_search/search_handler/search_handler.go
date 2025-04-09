@@ -93,8 +93,6 @@ func KeywordSearch(c *gin.Context) {
 		"data":    results,
 	})
 }
-
-// AdvancedSearch 高级搜索
 func AdvancedSearch(c *gin.Context) {
 	var req search_dto.AdvancedSearchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -110,15 +108,28 @@ func AdvancedSearch(c *gin.Context) {
 
 	// 添加查询条件
 	if req.Category != "" {
-		query = query.Where("file_type = ?", req.Category)
+		query = query.Where("category = ?", req.Category)
 	}
 	if req.Filename != "" {
 		query = query.Where("filename LIKE ?", "%"+req.Filename+"%")
 	}
-	if !req.StartDate.IsZero() {
+	// 处理时间范围条件
+	if !req.StartDate.IsZero() && !req.EndDate.IsZero() {
+		if req.StartDate.After(req.EndDate) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    400,
+				"message": "开始时间不能晚于结束时间",
+			})
+			return
+		}
+		req.StartDate = req.StartDate.UTC()
+		req.EndDate = req.EndDate.UTC()
+		query = query.Where("created_at BETWEEN ? AND ?", req.StartDate, req.EndDate)
+	} else if !req.StartDate.IsZero() {
+		req.StartDate = req.StartDate.UTC()
 		query = query.Where("created_at >= ?", req.StartDate)
-	}
-	if !req.EndDate.IsZero() {
+	} else if !req.EndDate.IsZero() {
+		req.EndDate = req.EndDate.UTC()
 		query = query.Where("created_at <= ?", req.EndDate)
 	}
 	for _, keyword := range req.Keywords {
@@ -127,6 +138,7 @@ func AdvancedSearch(c *gin.Context) {
 		}
 		query = query.Where("filename LIKE ?", "%"+keyword+"%")
 	}
+
 	var files []file_entity.File
 	var total int64
 
