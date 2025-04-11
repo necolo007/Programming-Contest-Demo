@@ -5,7 +5,6 @@ import (
 	"Programming-Demo/core/client"
 	"Programming-Demo/core/milvus"
 	"Programming-Demo/internal/app/ai/ai_entity"
-	"Programming-Demo/internal/app/ai/ai_service"
 	"Programming-Demo/pkg/aliyun"
 	"Programming-Demo/pkg/utils/bocha"
 	"context"
@@ -142,11 +141,6 @@ func WebBaseSearch(content string) (error, string) {
 	// 检查博查客户端是否已初始化
 	if bochalient.BochaClient == nil {
 		return errors.New("联网搜索功能未配置，请设置BOCHA_API_KEY环境变量"), ""
-	}
-
-	// 初始化Ristretto缓存
-	if err := ai_service.InitCache(); err != nil {
-		fmt.Printf("Failed to initialize cache: %v\n", err)
 	}
 
 	// 使用博查API进行搜索
