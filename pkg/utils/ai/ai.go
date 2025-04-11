@@ -161,8 +161,8 @@ func WebBaseSearch(content string) (error, string) {
 	// 解析搜索结果，提取有用信息
 	searchInfo, err := bocha.ExtractSearchInfo(searchResult)
 	if err != nil {
-		fmt.Printf("解析搜索结果出错: %v，将使用原始结果\n", err)
 		searchInfo = "搜索结果解析失败，但仍可能包含有用信息: " + searchResult
+		return fmt.Errorf("解析搜索结果出错: %v，将使用原始结果\n", err), searchInfo
 	}
 
 	return nil, searchInfo

@@ -14,6 +14,7 @@ import (
 	"Programming-Demo/pkg/utils/prompt"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -106,16 +107,18 @@ func ChatWithAi(c *gin.Context) {
 		fmt.Printf("Failed to update theme: %v\n", err)
 	}
 
-	var prompt string
+	var prompt, searchInfo string
 	if req.Search == true {
-		err, searchInfo := ai.WebBaseSearch(req.Content)
+		err, searchInfo = ai.WebBaseSearch(req.Content)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": "联网搜索失败", "error": err})
 			return
 		}
+		log.Println(searchInfo)
 		prompt = ai.GenerateWebSearchPrompt(req.Theme, histories, req.Content, searchInfo)
 	} else {
 		prompt = generateLegalAssistantPrompt(req.Theme, histories, req.Content)
+		searchInfo = ""
 	}
 
 	var Resp string
@@ -172,9 +175,10 @@ func ChatWithAi(c *gin.Context) {
 	}()
 
 	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
-		"theme":   req.Theme,
-		"message": Resp,
+		"code":       code,
+		"searchInfo": searchInfo,
+		"theme":      req.Theme,
+		"message":    Resp,
 	})
 }
 
