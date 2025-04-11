@@ -111,7 +111,7 @@ func ChatWithAi(c *gin.Context) {
 	if req.Search == true {
 		err, searchInfo = ai.WebBaseSearch(req.Content)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": "联网搜索失败", "error": err})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "联网搜索失败", "error": err.Error()})
 			return
 		}
 		log.Println(searchInfo)

@@ -140,7 +140,7 @@ func GetAIResp(m string) (string, int) {
 func WebBaseSearch(content string) (error, string) {
 	// 检查博查客户端是否已初始化
 	if bochalient.BochaClient == nil {
-		return errors.New("联网搜索功能未配置，请设置BOCHA_API_KEY环境变量"), ""
+		return fmt.Errorf("联网搜索功能未配置，请设置BOCHA_API_KEY环境变量"), ""
 	}
 
 	// 使用博查API进行搜索
@@ -155,7 +155,7 @@ func WebBaseSearch(content string) (error, string) {
 	// 使用封装的bochalient.BochaClient获取客户端并执行搜索
 	searchResult, err := bochalient.BochaClient.GetClient().Search(searchReq)
 	if err != nil {
-		return errors.New("搜索失败: " + err.Error()), ""
+		return err, ""
 	}
 
 	// 解析搜索结果，提取有用信息
