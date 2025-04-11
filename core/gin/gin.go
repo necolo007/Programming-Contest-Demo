@@ -34,13 +34,13 @@ func GinInit() *gin.Engine {
 	} else {
 		log.Println("Milvus客户端初始化成功")
 	}
-	err = milvus.DeleteMilvusCollection(&ctx)
-	if err != nil {
-		log.Printf("删除Milvus集合失败: %v", err)
-	}
-	err = milvus.CreateCollection(ctx)
-	if err != nil {
-		log.Printf("创建Milvus集合失败: %v", err)
-	}
+	//err = milvus.DeleteMilvusCollection(&ctx)
+	//if err != nil {
+	//	log.Printf("删除Milvus集合失败: %v", err)
+	//}
+	//err = milvus.CreateCollection(ctx)
+	//if err != nil {
+	//	log.Printf("创建Milvus集合失败: %v", err)
+	//}
 	return r
 }

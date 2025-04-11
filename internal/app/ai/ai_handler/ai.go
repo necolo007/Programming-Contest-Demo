@@ -106,8 +106,17 @@ func ChatWithAi(c *gin.Context) {
 		fmt.Printf("Failed to update theme: %v\n", err)
 	}
 
-	// 使用结构化的法律助手提示
-	prompt := generateLegalAssistantPrompt(req.Theme, histories, req.Content)
+	var prompt string
+	if req.Search == true {
+		err, searchInfo := ai.WebBaseSearch(req.Content)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "联网搜索失败", "error": err})
+			return
+		}
+		prompt = ai.GenerateWebSearchPrompt(req.Theme, histories, req.Content, searchInfo)
+	} else {
+		prompt = generateLegalAssistantPrompt(req.Theme, histories, req.Content)
+	}
 
 	var Resp string
 	var code int

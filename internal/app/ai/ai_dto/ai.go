@@ -4,6 +4,7 @@ type ChatReq struct {
 	Model   string `json:"model"`
 	Content string `json:"content"`
 	Theme   string `gorm:"not null" json:"theme"`
+	Search  bool   `json:"search"` // 是否搜索
 }
 
 type AnalyzeReq struct {
