@@ -370,41 +370,138 @@ func GetTemplateDetailHandler(c *gin.Context) {
 		return
 	}
 
-	// 尝试解析为结构化的TemplateContent
 	var content template_entity.TemplateContent
+
 	if err := json.Unmarshal(template.Content, &content); err != nil {
-		// 记录错误以便调试
+		// 解析失败，仍然返回原始template
 		fmt.Printf("模板内容解析失败: %v, 内容: %s\n", err, string(template.Content))
-
-		// 尝试作为通用JSON返回
-		var rawContent map[string]interface{}
-		if jsonErr := json.Unmarshal(template.Content, &rawContent); jsonErr == nil {
-			c.JSON(http.StatusOK, gin.H{
-				"id":          template.ID,
-				"name":        template.Name,
-				"type":        template.Type,
-				"environment": template.Environment,
-				"content":     rawContent,
-				"createdAt":   template.CreatedAt,
-				"updatedAt":   template.UpdatedAt,
-				"parseError":  "无法解析为完整的模板内容结构，但已返回原始数据",
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "模板内容解析失败", "details": err.Error()})
+		c.JSON(http.StatusOK, gin.H{
+			"template":   template,
+			"markdown":   "",
+			"parseError": "无法解析模板内容为Markdown格式: " + err.Error(),
+		})
 		return
 	}
 
+	// 转换为Markdown
+	markdownContent := convertTemplateToMarkdown(content, template.Type)
+
+	// 返回完整template和markdown内容
 	c.JSON(http.StatusOK, gin.H{
-		"id":          template.ID,
-		"name":        template.Name,
-		"type":        template.Type,
-		"environment": template.Environment,
-		"content":     content,
-		"createdAt":   template.CreatedAt,
-		"updatedAt":   template.UpdatedAt,
+		"template": template,        // 完整的template对象
+		"markdown": markdownContent, // markdown格式的内容
 	})
+}
+
+// 将模板内容转换为Markdown格式
+func convertTemplateToMarkdown(content template_entity.TemplateContent, templateType string) string {
+	var markdownBuilder strings.Builder
+
+	// 标题
+	markdownBuilder.WriteString("# " + content.Title + "\n\n")
+
+	// 引言
+	if content.Introduction != "" {
+		markdownBuilder.WriteString("## 引言\n\n" + content.Introduction + "\n\n")
+	}
+
+	// 当事人信息
+	markdownBuilder.WriteString("## 当事人信息\n\n")
+	for _, party := range content.Parties {
+		markdownBuilder.WriteString("### " + party.Role + "\n\n")
+		markdownBuilder.WriteString("- 名称: " + party.Name + "\n")
+		markdownBuilder.WriteString("- 地址: " + party.Address + "\n")
+		if party.ContactInfo != "" {
+			markdownBuilder.WriteString("- 联系方式: " + party.ContactInfo + "\n")
+		}
+		markdownBuilder.WriteString("\n")
+	}
+
+	// 根据模板类型生成不同的内容部分
+	switch templateType {
+	case "contract", "agreement":
+		// 条款
+		markdownBuilder.WriteString("## 合同条款\n\n")
+		for _, clause := range content.Clauses {
+			markdownBuilder.WriteString("### " + clause.Title + "\n\n")
+			if clause.Description != "" {
+				markdownBuilder.WriteString("**" + clause.Description + "**\n\n")
+			}
+			markdownBuilder.WriteString(clause.Content + "\n\n")
+		}
+
+		// 附加条款
+		if content.AdditionalTerms != nil {
+			markdownBuilder.WriteString("## 附加条款\n\n")
+			// 由于 AdditionalTerms 是 interface{} 类型，需要判断具体类型
+			switch terms := content.AdditionalTerms.(type) {
+			case []interface{}:
+				for i, term := range terms {
+					markdownBuilder.WriteString(fmt.Sprintf("%d. %v\n\n", i+1, term))
+				}
+			case string:
+				markdownBuilder.WriteString(terms + "\n\n")
+			default:
+				// 尝试将其转为 JSON 字符串
+				if termsJSON, err := json.Marshal(terms); err == nil {
+					markdownBuilder.WriteString(string(termsJSON) + "\n\n")
+				}
+			}
+		}
+	case "lawsuit":
+		// 诉讼请求
+		markdownBuilder.WriteString("## 诉讼请求\n\n")
+		for i, request := range content.Requests {
+			markdownBuilder.WriteString(fmt.Sprintf("### 请求 %d: %s\n\n", i+1, request.Type))
+			markdownBuilder.WriteString(request.Description + "\n\n")
+		}
+
+		// 证据
+		markdownBuilder.WriteString("## 证据材料\n\n")
+		for i, evidence := range content.Evidence {
+			markdownBuilder.WriteString(fmt.Sprintf("### 证据 %d: %s\n\n", i+1, evidence.Name))
+			markdownBuilder.WriteString(evidence.Description + "\n\n")
+		}
+	}
+
+	// 法律声明
+	if content.LegalStatement != "" {
+		markdownBuilder.WriteString("## 法律声明\n\n" + content.LegalStatement + "\n\n")
+	}
+
+	// 签署部分
+	if content.Signature != nil {
+		markdownBuilder.WriteString("## 签署\n\n")
+		// 由于 Signature 是 interface{} 类型，需要判断具体类型
+		switch sig := content.Signature.(type) {
+		case string:
+			markdownBuilder.WriteString(sig + "\n\n")
+		case template_entity.Signature:
+			markdownBuilder.WriteString(fmt.Sprintf("签署方式: %s\n\n", sig.Method))
+			markdownBuilder.WriteString(fmt.Sprintf("日期格式: %s\n\n", sig.DateFormat))
+		case map[string]interface{}:
+			if method, ok := sig["method"].(string); ok {
+				markdownBuilder.WriteString(fmt.Sprintf("签署方式: %s\n\n", method))
+			}
+			if dateFormat, ok := sig["dateFormat"].(string); ok {
+				markdownBuilder.WriteString(fmt.Sprintf("日期格式: %s\n\n", dateFormat))
+			}
+		default:
+			// 尝试将其转为 JSON 字符串
+			if sigJSON, err := json.Marshal(sig); err == nil {
+				markdownBuilder.WriteString(string(sigJSON) + "\n\n")
+			}
+		}
+	}
+
+	// 元数据信息
+	markdownBuilder.WriteString("---\n\n")
+	markdownBuilder.WriteString(fmt.Sprintf("**文档类型**: %s - %s - %s\n\n",
+		content.Metadata.CategoryName,
+		content.Metadata.SubCategoryName,
+		content.Metadata.DocTypeName))
+
+	return markdownBuilder.String()
 }
 
 // 初始化系统模板
